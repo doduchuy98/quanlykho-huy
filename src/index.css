@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-slate-950: var(--bg-deep);
+  --color-slate-900: var(--bg-main);
+  --color-slate-850: var(--bg-card);
+  --color-slate-800: var(--border-color);
+  
+  --color-slate-100: var(--text-100);
+  --color-slate-200: var(--text-200);
+  --color-slate-300: var(--text-300);
+  --color-slate-400: var(--text-400);
+  --color-slate-500: var(--text-500);
+  --color-slate-600: var(--text-600);
+  --color-slate-650: var(--text-650);
+  --color-slate-700: var(--text-700);
+
+  /* Dynamic Accent Colors (mapped to Orange/Amber) */
+  --color-orange-400: var(--primary-400);
+  --color-orange-500: var(--primary-500);
+  --color-orange-600: var(--primary-600);
+  --color-amber-400: var(--primary-400);
+  --color-amber-500: var(--primary-500);
+  --color-amber-600: var(--primary-600);
+
+  /* Dynamic Border Radiuses */
+  --radius-sm: var(--radius-custom-sm);
+  --radius-md: var(--radius-custom-md);
+  --radius-lg: var(--radius-custom-lg);
+  --radius-xl: var(--radius-custom-xl);
+  --radius-2xl: var(--radius-custom-2xl);
+  --radius-3xl: var(--radius-custom-3xl);
+
+  /* Dynamic Typography */
+  --font-sans: var(--font-family-custom);
+}
+
+:root {
+  --bg-deep: #020617;
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
+  --border-color: #334155;
+  
+  --text-100: #f8fafc;
+  --text-200: #e2e8f0;
+  --text-300: #cbd5e1;
+  --text-400: #94a3b8;
+  --text-500: #64748b;
+  --text-600: #475569;
+  --text-650: #334155;
+  --text-700: #1e293b;
+
+  /* Default Primary: Orange */
+  --primary-400: #fb923c;
+  --primary-500: #f97316;
+  --primary-600: #ea580c;
+
+  /* Default Radius: Round */
+  --radius-custom-sm: 6px;
+  --radius-custom-md: 8px;
+  --radius-custom-lg: 12px;
+  --radius-custom-xl: 16px;
+  --radius-custom-2xl: 20px;
+  --radius-custom-3xl: 24px;
+
+  /* Default Font: Inter */
+  --font-family-custom: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+.light {
+  --bg-deep: #cbd5e1;
+  --bg-main: #ffffff;
+  --bg-card: #f8fafc;
+  --border-color: #e2e8f0;
+  
+  --text-100: #0f172a;
+  --text-200: #1e293b;
+  --text-300: #334155;
+  --text-400: #475569;
+  --text-500: #64748b;
+  --text-600: #94a3b8;
+  --text-650: #cbd5e1;
+  --text-700: #e2e8f0;
+}
+

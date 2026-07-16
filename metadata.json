@@ -1,0 +1,8 @@
+{
+  "name": "Remix: ServeFlow: F\u0026B Table POS",
+  "description": "Mobile-first POS featuring visual table layouts, one-handed navigation, and real-time order tracking for efficient F\u0026B and service management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
