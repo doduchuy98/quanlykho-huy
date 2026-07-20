@@ -12,12 +12,12 @@ import {
 } from 'lucide-react';
 import { Table, MenuItem, Order, OrderItem } from '../types';
 import { formatVND } from '../utils';
-import { CATEGORIES } from '../data';
 
 interface MobilePOSScreenProps {
   table: Table;
   zoneName: string;
   menuItems: MenuItem[];
+  categories: { id: string; name: string; icon: string }[];
   activeOrder: Order | null;
   onAddToCart: (item: MenuItem) => void;
   onBack: () => void;
@@ -31,6 +31,7 @@ export default function MobilePOSScreen({
   table,
   zoneName,
   menuItems,
+  categories,
   activeOrder,
   onAddToCart,
   onBack,
@@ -39,7 +40,7 @@ export default function MobilePOSScreen({
   onUpdateQuantity,
   onRemoveItem
 }: MobilePOSScreenProps) {
-  const [selectedCategory, setSelectedCategory] = useState('coffee');
+  const [selectedCategory, setSelectedCategory] = useState(() => categories[0]?.id || 'coffee');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter items by category and search query
@@ -112,7 +113,7 @@ export default function MobilePOSScreen({
       {/* Horizontal Category Slider */}
       <div className="bg-slate-950/40 py-2 border-b border-slate-850 shrink-0">
         <div className="overflow-x-auto scrollbar-none px-4 flex gap-2">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
               <button
@@ -236,13 +237,20 @@ export default function MobilePOSScreen({
                 >
                   {/* Left part: Image with badge overlays */}
                   <div className="w-16 h-16 rounded-xl overflow-hidden relative bg-slate-900 select-none shrink-0 border border-slate-800">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-slate-500">
+                        <span className="text-lg">☕</span>
+                        <span className="text-[7px] font-black mt-1">KHÔNG ẢNH</span>
+                      </div>
+                    )}
                     
                     {/* Món mới badge */}
                     {isNewlyCreated && (
@@ -281,6 +289,9 @@ export default function MobilePOSScreen({
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-[11px] font-black text-orange-400">
                         {formatVND(item.price)}
+                      </span>
+                      <span className="text-[9px] text-slate-500 font-bold bg-slate-900 px-1 py-0.2 rounded border border-slate-800">
+                        {item.unit || 'Ly'}
                       </span>
                     </div>
                   </div>

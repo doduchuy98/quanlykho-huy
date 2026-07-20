@@ -25,6 +25,7 @@ import HistoryTab from './components/HistoryTab';
 import SettingsTab from './components/SettingsTab';
 import ManagementTab from './components/ManagementTab';
 import HomeTab from './components/HomeTab';
+import ProvisionalModal from './components/ProvisionalModal';
 import { formatVND } from './utils';
 
 export default function App() {
@@ -68,6 +69,18 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
   });
 
+  const [categories, setCategories] = useState<{ id: string; name: string; icon: string }[]>(() => {
+    const saved = localStorage.getItem('fb_pos_categories');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: 'coffee', name: 'Cà phê', icon: '☕' },
+      { id: 'tea', name: 'Trà sữa', icon: '🧋' },
+      { id: 'juice', name: 'Sinh tố & Nước ép', icon: '🍹' },
+      { id: 'snack', name: 'Đồ ăn vặt', icon: '🍟' },
+      { id: 'food', name: 'Điểm tâm', icon: '🍜' },
+    ];
+  });
+
   const [auditSessions, setAuditSessions] = useState<AuditSession[]>(() => {
     const saved = localStorage.getItem('fb_pos_audit_sessions');
     if (saved) return JSON.parse(saved);
@@ -88,10 +101,10 @@ export default function App() {
         time: `${yesterdayStr}T22:30:00Z`,
         notes: 'Kiểm kê cuối ngày - Ca tối bàn giao',
         items: [
-          { itemId: 'i1', itemName: 'Cà phê hạt Robusta', unit: 'kg', systemQty: 25.0, actualQty: 24.8, difference: -0.2 },
-          { itemId: 'i2', itemName: 'Sữa đặc Ngôi Sao', unit: 'lon', systemQty: 50, actualQty: 50, difference: 0 },
-          { itemId: 'i5', itemName: 'Bánh mì tươi (ổ)', unit: 'ổ', systemQty: 8, actualQty: 6, difference: -2 },
-          { itemId: 'i12', itemName: 'Đá viên tinh khiết', unit: 'kg', systemQty: 125, actualQty: 120, difference: -5 }
+          { itemId: 'i1', itemName: 'Cà phê hạt Robusta', unit: 'kg', systemQty: 25.0, actualQty: 24.8, difference: -0.2, openingQty: 20, importedQty: 10, exportedQty: 5, closingQty: 24.8 },
+          { itemId: 'i2', itemName: 'Sữa đặc Ngôi Sao', unit: 'lon', systemQty: 50, actualQty: 50, difference: 0, openingQty: 40, importedQty: 20, exportedQty: 10, closingQty: 50 },
+          { itemId: 'i5', itemName: 'Bánh mì tươi (ổ)', unit: 'ổ', systemQty: 8, actualQty: 6, difference: -2, openingQty: 10, importedQty: 5, exportedQty: 7, closingQty: 6 },
+          { itemId: 'i12', itemName: 'Đá viên tinh khiết', unit: 'kg', systemQty: 125, actualQty: 120, difference: -5, openingQty: 100, importedQty: 50, exportedQty: 25, closingQty: 120 }
         ]
       },
       {
@@ -100,10 +113,10 @@ export default function App() {
         time: `${twoDaysAgoStr}T22:15:00Z`,
         notes: 'Kiểm kê định kỳ đầu tuần',
         items: [
-          { itemId: 'i1', itemName: 'Cà phê hạt Robusta', unit: 'kg', systemQty: 30.0, actualQty: 30.0, difference: 0 },
-          { itemId: 'i3', itemName: 'Trà đen nguyên lá', unit: 'kg', systemQty: 15.0, actualQty: 14.9, difference: -0.1 },
-          { itemId: 'i4', itemName: 'Trân châu đen Royal', unit: 'kg', systemQty: 20.0, actualQty: 20.0, difference: 0 },
-          { itemId: 'i6', itemName: 'Bơ sáp Đắk Lắk', unit: 'kg', systemQty: 10.0, actualQty: 9.5, difference: -0.5 }
+          { itemId: 'i1', itemName: 'Cà phê hạt Robusta', unit: 'kg', systemQty: 30.0, actualQty: 30.0, difference: 0, openingQty: 30.0, importedQty: 0, exportedQty: 0, closingQty: 30.0 },
+          { itemId: 'i3', itemName: 'Trà đen nguyên lá', unit: 'kg', systemQty: 15.0, actualQty: 14.9, difference: -0.1, openingQty: 15.0, importedQty: 0, exportedQty: 0.1, closingQty: 14.9 },
+          { itemId: 'i4', itemName: 'Trân châu đen Royal', unit: 'kg', systemQty: 20.0, actualQty: 20.0, difference: 0, openingQty: 20.0, importedQty: 0, exportedQty: 0, closingQty: 20.0 },
+          { itemId: 'i6', itemName: 'Bơ sáp Đắk Lắk', unit: 'kg', systemQty: 10.0, actualQty: 9.5, difference: -0.5, openingQty: 10.0, importedQty: 0, exportedQty: 0.5, closingQty: 9.5 }
         ]
       }
     ];
@@ -117,6 +130,7 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeTableForAction, setActiveTableForAction] = useState<Table | null>(null);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isProvisionalOpen, setIsProvisionalOpen] = useState(false);
   const [isAddTableOpen, setIsAddTableOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -165,6 +179,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('fb_pos_audit_sessions', JSON.stringify(auditSessions));
   }, [auditSessions]);
+
+  useEffect(() => {
+    localStorage.setItem('fb_pos_categories', JSON.stringify(categories));
+  }, [categories]);
 
   useEffect(() => {
     localStorage.setItem('fb_pos_theme', theme);
@@ -317,13 +335,13 @@ export default function App() {
     if (!currentOrder) return;
 
     let updatedItems = [...currentOrder.items];
-    const existingIndex = updatedItems.findIndex(i => i.menuItemId === menuItem.id && i.isNew);
+    const existingIndex = updatedItems.findIndex(i => i.menuItemId === menuItem.id);
 
     if (existingIndex > -1) {
       updatedItems[existingIndex] = {
         ...updatedItems[existingIndex],
         quantity: updatedItems[existingIndex].quantity + 1,
-        isNew: true
+        isNew: false
       };
     } else {
       const newItem: OrderItem = {
@@ -332,7 +350,7 @@ export default function App() {
         name: menuItem.name,
         price: menuItem.price,
         quantity: 1,
-        isNew: true
+        isNew: false
       };
       updatedItems.push(newItem);
     }
@@ -811,6 +829,7 @@ export default function App() {
             table={activeTableForPOS}
             zoneName={getZoneName(activeTableForPOS.zoneId)}
             menuItems={menuItems}
+            categories={categories}
             activeOrder={getActiveOrderForTable(activeTableForPOS.id)}
             onAddToCart={handleAddToCart}
             onBack={() => setActiveTableForPOS(null)}
@@ -857,6 +876,7 @@ export default function App() {
                       onTableLongPress={handleTableLongPress}
                       onAddTableClick={() => setIsAddTableOpen(true)}
                       onDeleteZone={handleDeleteZone}
+                      onAddZone={handleAddZone}
                     />
                   )}
 
@@ -881,6 +901,8 @@ export default function App() {
                       invoices={invoices}
                       auditSessions={auditSessions}
                       onUpdateAuditSessions={setAuditSessions}
+                      categories={categories}
+                      onUpdateCategories={setCategories}
                     />
                   )}
 
@@ -1031,8 +1053,19 @@ export default function App() {
             onUpdateQuantity={handleUpdateQuantity}
             onUpdateNotes={handleUpdateNotes}
             onRemoveItem={handleRemoveItem}
-            onSendToKitchen={handleSendToKitchen}
+            onProvisionalBill={() => setIsProvisionalOpen(true)}
             onProceedToPayment={handleProceedToPayment}
+          />
+        )}
+
+        {/* Provisional Bill Modal */}
+        {isProvisionalOpen && activeTableForPOS && (
+          <ProvisionalModal
+            isOpen={isProvisionalOpen}
+            onClose={() => setIsProvisionalOpen(false)}
+            activeOrder={getActiveOrderForTable(activeTableForPOS.id)}
+            table={activeTableForPOS}
+            zoneName={getZoneName(activeTableForPOS.zoneId)}
           />
         )}
 

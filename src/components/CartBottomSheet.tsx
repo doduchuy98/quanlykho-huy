@@ -24,7 +24,7 @@ interface CartBottomSheetProps {
   onUpdateQuantity: (orderItemId: string, change: number) => void;
   onUpdateNotes: (orderItemId: string, notes: string) => void;
   onRemoveItem: (orderItemId: string) => void;
-  onSendToKitchen: () => void;
+  onProvisionalBill: () => void;
   onProceedToPayment: () => void;
 }
 
@@ -37,7 +37,7 @@ export default function CartBottomSheet({
   onUpdateQuantity,
   onUpdateNotes,
   onRemoveItem,
-  onSendToKitchen,
+  onProvisionalBill,
   onProceedToPayment
 }: CartBottomSheetProps) {
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -138,145 +138,98 @@ export default function CartBottomSheet({
 
         {/* Order Item List */}
         <div className="flex-1 overflow-y-auto px-4 py-3 scrollbar-none flex flex-col gap-4">
-          {(() => {
-            const newItems = activeOrder.items.filter(item => item.isNew);
-            const sentItems = activeOrder.items.filter(item => !item.isNew);
-
-            if (activeOrder.items.length === 0) {
-              return (
-                <div className="flex flex-col items-center justify-center h-36 text-slate-500">
-                  <MessageSquareOff size={24} className="text-slate-600 mb-1" />
-                  <p className="text-xs">Chưa có món nào được gọi</p>
-                </div>
-              );
-            }
-
-            const renderItemCard = (item: OrderItem) => (
-              <div
-                key={item.id}
-                className={`p-3 rounded-2xl border flex flex-col gap-2 shadow-xs transition-all ${
-                  item.isNew 
-                    ? 'bg-amber-500/5 border-amber-500/15 hover:border-amber-500/30' 
-                    : 'bg-slate-850 border-slate-800/80 hover:border-slate-800'
-                }`}
-              >
-                <div className="flex justify-between items-start gap-2">
-                  <div className="flex-1">
-                    <span className="text-xs font-bold text-slate-200 block flex items-center flex-wrap gap-1">
-                      {item.name}
-                      {item.isNew ? (
-                        <span className="bg-amber-500/10 text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded-md border border-amber-500/20 animate-pulse whitespace-nowrap">
-                          ✨ MỚI GỌI
+          {activeOrder.items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-36 text-slate-500">
+              <MessageSquareOff size={24} className="text-slate-600 mb-1" />
+              <p className="text-xs">Chưa có món nào được gọi</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-1 mb-1">
+                <span className="text-[10px] font-black text-orange-400 tracking-wider uppercase flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-lg">
+                  📋 Danh sách món đã chọn ({activeOrder.items.reduce((acc, item) => acc + item.quantity, 0)})
+                </span>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {activeOrder.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 rounded-2xl border bg-slate-850 border-slate-800/80 hover:border-slate-800 flex flex-col gap-2 shadow-xs transition-all"
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1">
+                        <span className="text-xs font-bold text-slate-200 block">
+                          {item.name}
                         </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {formatVND(item.price)}
+                        </span>
+                      </div>
+
+                      {/* Quantity controls designed for accurate thumb taps */}
+                      <div className="flex items-center bg-slate-900 rounded-xl border border-slate-800 px-1 py-0.5">
+                        <button
+                          onClick={() => onUpdateQuantity(item.id, -1)}
+                          className="p-1.5 text-slate-400 hover:text-slate-200"
+                        >
+                          <Minus size={11} />
+                        </button>
+                        <span className="px-2.5 text-xs font-black text-slate-200 min-w-[20px] text-center">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => onUpdateQuantity(item.id, 1)}
+                          className="p-1.5 text-slate-400 hover:text-slate-200"
+                        >
+                          <Plus size={11} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Notes and Delete Action */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-800/30 gap-2">
+                      {editingNotesId === item.id ? (
+                        <div className="flex-1 flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="Ví dụ: Ít đá, không hành..."
+                            value={tempNotes}
+                            onChange={(e) => setTempNotes(e.target.value)}
+                            className="flex-1 bg-slate-900 border border-slate-700/50 rounded-lg px-2 py-0.5 text-[10px] text-slate-200 focus:outline-none focus:border-orange-500/50"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSaveNotes(item.id)}
+                            className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-lg"
+                          >
+                            Lưu
+                          </button>
+                        </div>
                       ) : (
-                        <span className="bg-slate-900 text-slate-400 text-[8px] font-black px-1.5 py-0.5 rounded-md border border-slate-800 whitespace-nowrap">
-                          👨‍🍳 Đã gửi bếp
-                        </span>
+                        <button
+                          onClick={() => handleStartEditingNotes(item)}
+                          className="text-[10px] text-orange-400 hover:text-orange-300 font-medium flex items-center gap-1.5 bg-slate-900/40 px-2.5 py-1 rounded-lg border border-slate-800"
+                        >
+                          <FileText size={10} />
+                          <span className="truncate max-w-[150px]">
+                            {item.notes ? `Ghi chú: ${item.notes}` : '+ Thêm ghi chú món'}
+                          </span>
+                        </button>
                       )}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {formatVND(item.price)}
-                    </span>
-                  </div>
 
-                  {/* Quantity controls designed for accurate thumb taps */}
-                  <div className="flex items-center bg-slate-900 rounded-xl border border-slate-800 px-1 py-0.5">
-                    <button
-                      onClick={() => onUpdateQuantity(item.id, -1)}
-                      className="p-1.5 text-slate-400 hover:text-slate-200"
-                    >
-                      <Minus size={11} />
-                    </button>
-                    <span className="px-2.5 text-xs font-black text-slate-200 min-w-[20px] text-center">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => onUpdateQuantity(item.id, 1)}
-                      className="p-1.5 text-slate-400 hover:text-slate-200"
-                    >
-                      <Plus size={11} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Notes and Delete Action */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-800/30 gap-2">
-                  {editingNotesId === item.id ? (
-                    <div className="flex-1 flex gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="Ví dụ: Ít đá, không hành..."
-                        value={tempNotes}
-                        onChange={(e) => setTempNotes(e.target.value)}
-                        className="flex-1 bg-slate-900 border border-slate-700/50 rounded-lg px-2 py-0.5 text-[10px] text-slate-200 focus:outline-none focus:border-orange-500/50"
-                        autoFocus
-                      />
                       <button
-                        onClick={() => handleSaveNotes(item.id)}
-                        className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-lg"
+                        onClick={() => onRemoveItem(item.id)}
+                        className="p-1 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-900"
+                        title="Xóa món"
                       >
-                        Lưu
+                        <Trash2 size={12} />
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => handleStartEditingNotes(item)}
-                      className="text-[10px] text-orange-400 hover:text-orange-300 font-medium flex items-center gap-1.5 bg-slate-900/40 px-2.5 py-1 rounded-lg border border-slate-800"
-                    >
-                      <FileText size={10} />
-                      <span className="truncate max-w-[150px]">
-                        {item.notes ? `Ghi chú: ${item.notes}` : '+ Thêm ghi chú món'}
-                      </span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => onRemoveItem(item.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-900"
-                    title="Xóa món"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
+                  </div>
+                ))}
               </div>
-            );
-
-            return (
-              <>
-                {/* SECTION 1: MÓN MỚI GỌI (CHƯA GỬI BẾP) */}
-                {newItems.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-black text-amber-400 tracking-wider uppercase flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                        ✨ Món mới gọi ({newItems.reduce((acc, item) => acc + item.quantity, 0)})
-                      </span>
-                      <span className="text-[8px] text-slate-500 font-bold uppercase">Cần gửi bếp</span>
-                    </div>
-                    <div className="flex flex-col gap-2.5">
-                      {newItems.map(renderItemCard)}
-                    </div>
-                  </div>
-                )}
-
-                {/* SECTION 2: MÓN ĐÃ GỬI BẾP (ĐANG CHẾ BIẾN) */}
-                {sentItems.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between px-1 pt-1">
-                      <span className="text-[10px] font-black text-emerald-400 tracking-wider uppercase flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                        <ChefHat size={11} className="text-emerald-400 shrink-0" />
-                        👨‍🍳 Món đã gửi bếp ({sentItems.reduce((acc, item) => acc + item.quantity, 0)})
-                      </span>
-                      <span className="text-[8px] text-slate-500 font-bold uppercase">Đang chế biến</span>
-                    </div>
-                    <div className="flex flex-col gap-2.5">
-                      {sentItems.map(renderItemCard)}
-                    </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+            </div>
+          )}
         </div>
 
         {/* Promo Code & Bill Summary Segment */}
@@ -322,16 +275,16 @@ export default function CartBottomSheet({
           {/* Primary Operations Buttons */}
           <div className="grid grid-cols-2 gap-3 mt-1 pb-2">
             <button
-              onClick={onSendToKitchen}
-              className="flex items-center justify-center gap-1.5 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl py-3 text-xs font-bold active:scale-95 transition-all"
+              onClick={onProvisionalBill}
+              className="flex items-center justify-center gap-1.5 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl py-3 text-xs font-bold active:scale-95 transition-all cursor-pointer"
             >
-              <ChefHat size={14} className="text-orange-400" />
-              <span>Báo chế biến</span>
+              <FileText size={14} className="text-orange-400" />
+              <span>Phiếu Tạm Tính</span>
             </button>
 
             <button
               onClick={onProceedToPayment}
-              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl py-3 text-xs font-extrabold shadow-lg shadow-emerald-500/10 active:scale-95 transition-all"
+              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl py-3 text-xs font-extrabold shadow-lg shadow-emerald-500/10 active:scale-95 transition-all cursor-pointer"
             >
               <CreditCard size={14} />
               <span>Thanh toán QR</span>

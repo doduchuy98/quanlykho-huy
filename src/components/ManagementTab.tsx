@@ -24,7 +24,6 @@ import {
   CheckSquare
 } from 'lucide-react';
 import { MenuItem, InventoryItem, Order, Table, Zone, Invoice, AuditSession } from '../types';
-import { CATEGORIES } from '../data';
 import { formatVND, calculateTimeElapsed } from '../utils';
 import KitchenKdsView from './KitchenKdsView';
 
@@ -41,6 +40,8 @@ interface ManagementTabProps {
   invoices: Invoice[];
   auditSessions: AuditSession[];
   onUpdateAuditSessions: (sessions: AuditSession[]) => void;
+  categories: { id: string; name: string; icon: string }[];
+  onUpdateCategories: (categories: { id: string; name: string; icon: string }[]) => void;
 }
 
 export default function ManagementTab({
@@ -55,7 +56,9 @@ export default function ManagementTab({
   zones,
   invoices,
   auditSessions,
-  onUpdateAuditSessions
+  onUpdateAuditSessions,
+  categories,
+  onUpdateCategories
 }: ManagementTabProps) {
   // Navigation sub-tab: 'menu' (Quản lý món), 'inventory' (Quản lý kho), 'audit' (Kiểm kê kho hàng), or 'sales' (Bán ra trong ngày)
   const [subTab, setSubTab] = useState<'menu' | 'inventory' | 'audit' | 'sales'>('menu');
@@ -88,7 +91,11 @@ export default function ManagementTab({
         unit: item.unit,
         systemQty: systemQty,
         actualQty: actualQty,
-        difference: Number((actualQty - systemQty).toFixed(3))
+        difference: Number((actualQty - systemQty).toFixed(3)),
+        openingQty: item.initialQuantity || 0,
+        importedQty: item.importedQuantity || 0,
+        exportedQty: item.exportedQuantity || 0,
+        closingQty: actualQty
       };
     });
 
@@ -144,6 +151,7 @@ export default function ManagementTab({
   const [mDescription, setMDescription] = useState('');
   const [mImageUrl, setMImageUrl] = useState('');
   const [mIsAvailable, setMIsAvailable] = useState(true);
+  const [mUnit, setMUnit] = useState('Ly');
 
   // --- INVENTORY STATES ---
   const [invSearch, setInvSearch] = useState('');
@@ -178,6 +186,8 @@ export default function ManagementTab({
   // --- SALES REPORT STATES ---
   const [salesSegment, setSalesSegment] = useState<'dishes' | 'ingredients'>('dishes');
   const [selectedSalesDate, setSelectedSalesDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [salesFilterType, setSalesFilterType] = useState<'day' | 'month'>('day');
+  const [selectedSalesMonth, setSelectedSalesMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
 
   const handleOpenRecipeModal = (item: MenuItem) => {
     setRecipeItem(item);
@@ -293,10 +303,11 @@ export default function ManagementTab({
     setSelectedMenuItem(null);
     setMName('');
     setMPrice(25000);
-    setMCategory('coffee');
+    setMCategory(categories[0]?.id || 'coffee');
     setMDescription('');
     setMImageUrl('https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=150&auto=format&fit=crop&q=60');
     setMIsAvailable(true);
+    setMUnit('Ly');
     setIsMenuModalOpen(true);
   };
 
@@ -308,6 +319,7 @@ export default function ManagementTab({
     setMDescription(item.description || '');
     setMImageUrl(item.imageUrl);
     setMIsAvailable(item.isAvailable);
+    setMUnit(item.unit || 'Ly');
     setIsMenuModalOpen(true);
   };
 
@@ -328,8 +340,9 @@ export default function ManagementTab({
             price: Number(mPrice),
             category: mCategory,
             description: mDescription,
-            imageUrl: mImageUrl || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=150&auto=format&fit=crop&q=60',
-            isAvailable: mIsAvailable
+            imageUrl: mImageUrl,
+            isAvailable: mIsAvailable,
+            unit: mUnit || 'Ly'
           };
         }
         return item;
@@ -344,9 +357,10 @@ export default function ManagementTab({
         price: Number(mPrice),
         category: mCategory,
         description: mDescription,
-        imageUrl: mImageUrl || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=150&auto=format&fit=crop&q=60',
+        imageUrl: mImageUrl,
         isAvailable: mIsAvailable,
-        isNew: true
+        isNew: true,
+        unit: mUnit || 'Ly'
       };
       onUpdateMenuItems([...menuItems, newItem]);
       showToast(`Đã thêm món mới: ${mName}`);
@@ -632,7 +646,7 @@ export default function ManagementTab({
             </div>
 
             {/* Horizontally scrollable Category Filter for mobile thumb reach */}
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5 items-center">
               <button
                 onClick={() => setMenuCatFilter('all')}
                 className={`px-3 py-1 rounded-full text-[10px] font-bold shrink-0 transition-all border ${
@@ -643,7 +657,7 @@ export default function ManagementTab({
               >
                 Tất cả
               </button>
-              {CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setMenuCatFilter(cat.id)}
@@ -657,7 +671,72 @@ export default function ManagementTab({
                   <span>{cat.name}</span>
                 </button>
               ))}
+
+              {/* Special Button to Add Category */}
+              <button
+                type="button"
+                onClick={() => {
+                  const name = prompt('Nhập tên danh mục mới:');
+                  if (name && name.trim()) {
+                    const icon = prompt('Nhập emoji biểu tượng cho danh mục (ví dụ: 🍿, 🥤, 🍮) hoặc để trống:', '🍽️') || '🍽️';
+                    const newId = `cat_${Date.now()}`;
+                    const newCat = { id: newId, name: name.trim(), icon: icon.trim() };
+                    onUpdateCategories([...categories, newCat]);
+                    setMenuCatFilter(newId);
+                    showToast(`Đã thêm danh mục mới: ${name.trim()}`);
+                  }
+                }}
+                className="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 transition-all border border-dashed border-slate-700 text-orange-400 hover:text-orange-300 hover:border-orange-500/50 flex items-center gap-1 bg-slate-900/50"
+              >
+                <Plus size={10} className="stroke-[2.5]" />
+                <span>Thêm danh mục</span>
+              </button>
             </div>
+
+            {/* Rename/Delete Action Bar for the selected category */}
+            {menuCatFilter !== 'all' && (
+              <div className="flex items-center gap-2 px-2 py-1.5 bg-slate-900/60 rounded-xl border border-slate-850/60 max-w-fit animate-in fade-in slide-in-from-top-1 duration-150">
+                <span className="text-[9px] font-bold text-slate-400">Danh mục chọn:</span>
+                <span className="text-[10px] font-black text-slate-200">
+                  {categories.find(c => c.id === menuCatFilter)?.icon} {categories.find(c => c.id === menuCatFilter)?.name}
+                </span>
+                <div className="h-3 w-px bg-slate-800 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentCat = categories.find(c => c.id === menuCatFilter);
+                    if (!currentCat) return;
+                    const newName = prompt(`Nhập tên mới cho danh mục "${currentCat.name}":`, currentCat.name);
+                    if (newName && newName.trim() && newName.trim() !== currentCat.name) {
+                      const updated = categories.map(c => c.id === menuCatFilter ? { ...c, name: newName.trim() } : c);
+                      onUpdateCategories(updated);
+                      showToast(`Đã đổi tên danh mục thành "${newName.trim()}"`);
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded bg-slate-800 text-amber-400 hover:text-amber-300 text-[9px] font-black hover:bg-slate-750 flex items-center gap-1 transition-all"
+                >
+                  <Edit2 size={9} /> Đổi tên
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentCat = categories.find(c => c.id === menuCatFilter);
+                    if (!currentCat) return;
+                    if (confirm(`Bạn có chắc muốn xóa danh mục "${currentCat.name}"?\nLưu ý: Tất cả món ăn thuộc danh mục này cũng sẽ bị xóa!`)) {
+                      const updatedCategories = categories.filter(c => c.id !== menuCatFilter);
+                      const updatedMenuItems = menuItems.filter(item => item.category !== menuCatFilter);
+                      onUpdateCategories(updatedCategories);
+                      onUpdateMenuItems(updatedMenuItems);
+                      setMenuCatFilter('all');
+                      showToast(`Đã xóa danh mục "${currentCat.name}" cùng các món ăn thuộc danh mục.`);
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded bg-rose-950/40 text-rose-400 hover:text-rose-300 text-[9px] font-black hover:bg-rose-950/80 flex items-center gap-1 transition-all"
+                >
+                  <Trash2 size={9} /> Xóa danh mục
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Menu Items list view */}
@@ -677,13 +756,20 @@ export default function ManagementTab({
                   }`}
                 >
                   {/* Item Image */}
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-800 relative">
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-800 relative flex items-center justify-center">
+                    {item.imageUrl ? (
+                      <img 
+                        src={item.imageUrl} 
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="text-center p-1">
+                        <Coffee size={20} className="mx-auto text-slate-500 stroke-[1.5]" />
+                        <span className="text-[7px] font-black text-slate-500 block mt-1">KHÔNG ẢNH</span>
+                      </div>
+                    )}
                     {!item.isAvailable && (
                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[9px] font-black text-red-400 tracking-wider">
                         HẾT MÓN
@@ -699,7 +785,7 @@ export default function ManagementTab({
                           {item.name}
                         </h4>
                         <span className="text-[9px] text-slate-500 font-bold bg-slate-900 px-1.5 py-0.5 rounded-md shrink-0 border border-slate-850">
-                          {CATEGORIES.find(c => c.id === item.category)?.name || 'Khác'}
+                          {categories.find(c => c.id === item.category)?.name || 'Khác'}
                         </span>
                       </div>
                       {item.description && (
@@ -729,9 +815,14 @@ export default function ManagementTab({
                     </div>
 
                     <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-850/40">
-                      <span className="text-xs font-black text-orange-400">
-                        {formatVND(item.price)}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-orange-400">
+                          {formatVND(item.price)}
+                        </span>
+                        <span className="text-[9px] text-slate-500 font-bold bg-slate-900 px-1 py-0.2 rounded border border-slate-850">
+                          {item.unit || 'Ly'}
+                        </span>
+                      </div>
 
                       {/* Control buttons */}
                       <div className="flex items-center gap-1">
@@ -1034,38 +1125,71 @@ export default function ManagementTab({
 
                     {/* Expanded Detail Table */}
                     {isExpanded && (
-                      <div className="px-3.5 pb-4 pt-1 border-t border-slate-900 bg-slate-950/20">
-                        <div className="overflow-x-auto scrollbar-none rounded-xl border border-slate-900">
-                          <table className="w-full text-[10px] text-left">
-                            <thead className="bg-slate-900 text-slate-400 font-black tracking-wider uppercase border-b border-slate-850">
-                              <tr>
-                                <th className="py-2 px-3">Nguyên liệu</th>
-                                <th className="py-2 px-2 text-center">Tồn hệ thống</th>
-                                <th className="py-2 px-2 text-center">Thực tế</th>
-                                <th className="py-2 px-3 text-right">Chênh lệch</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-900/60 font-semibold">
-                              {session.items.map((item) => {
-                                return (
-                                  <tr key={item.itemId} className="hover:bg-slate-900/15 transition-all text-slate-300">
-                                    <td className="py-2 px-3 font-bold text-slate-200">{item.itemName}</td>
-                                    <td className="py-2 px-2 text-center text-slate-400">{item.systemQty} <span className="text-[8px] uppercase">{item.unit}</span></td>
-                                    <td className="py-2 px-2 text-center font-bold">{item.actualQty} <span className="text-[8px] uppercase">{item.unit}</span></td>
-                                    <td className="py-2 px-3 text-right whitespace-nowrap">
-                                      {item.difference === 0 ? (
-                                        <span className="text-slate-500">-</span>
-                                      ) : item.difference < 0 ? (
-                                        <span className="text-red-400 font-extrabold">{item.difference} <span className="text-[8px] uppercase">{item.unit}</span></span>
-                                      ) : (
-                                        <span className="text-emerald-400 font-extrabold">+{item.difference} <span className="text-[8px] uppercase">{item.unit}</span></span>
-                                      )}
-                                    </td>
+                      <div className="px-3 pb-4 pt-1 bg-slate-950/40 border-t border-slate-900/50">
+                        {/* Physical Receipt/Paper Ticket design container */}
+                        <div className="bg-amber-50 text-slate-950 p-4 rounded-xl border border-amber-100 shadow-lg font-mono text-[10.5px] leading-tight select-none relative overflow-hidden">
+                          {/* Inner double border like classic bookkeeping form */}
+                          <div className="border border-amber-200/50 p-3 rounded-lg bg-amber-50/50">
+                            {/* Receipt Title */}
+                            <div className="text-center pb-2.5 mb-2.5 border-b border-dashed border-amber-900/20 space-y-0.5">
+                              <h3 className="text-[12px] font-black tracking-wider uppercase text-amber-950">PHIẾU KIỂM KÊ KHO HÀNG</h3>
+                              <p className="text-[9px] text-amber-900/60 font-bold">Ngày: {formattedDate} | Giờ: {formattedTime}</p>
+                              <p className="text-[9.5px] text-amber-900/80 italic font-medium">Ghi chú: {session.notes || 'Không ghi chú'}</p>
+                            </div>
+
+                            {/* Ticket Items Grid Table */}
+                            <div className="overflow-x-auto no-scrollbar">
+                              <table className="w-full text-[10px] text-left border-collapse min-w-[340px]">
+                                <thead>
+                                  <tr className="border-b-2 border-amber-900/20 text-amber-950 font-black tracking-wider text-[9px] uppercase">
+                                    <th className="py-1.5 px-1 text-left">TÊN NL</th>
+                                    <th className="py-1.5 px-1 text-center w-10">ĐVT</th>
+                                    <th className="py-1.5 px-1 text-center w-12">TĐ</th>
+                                    <th className="py-1.5 px-1 text-center w-12 text-emerald-800">NHẬP</th>
+                                    <th className="py-1.5 px-1 text-center w-12 text-rose-800">XUẤT</th>
+                                    <th className="py-1.5 px-1 text-right w-14">TC</th>
                                   </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                                </thead>
+                                <tbody className="divide-y divide-amber-900/10 text-slate-800">
+                                  {session.items.map((item) => {
+                                    const opening = item.openingQty ?? item.systemQty;
+                                    const imported = item.importedQty ?? 0;
+                                    const exported = item.exportedQty ?? 0;
+                                    const closing = item.closingQty ?? item.actualQty;
+                                    const diff = item.difference;
+
+                                    return (
+                                      <tr key={item.itemId} className="hover:bg-amber-100/50 transition-all font-semibold">
+                                        <td className="py-2 px-1 font-bold text-slate-900">
+                                          <div>{item.itemName}</div>
+                                          {diff !== 0 && (
+                                            <div className="text-[8.5px] font-bold mt-0.5 leading-none">
+                                              {diff < 0 ? (
+                                                <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded-sm border border-rose-100">Hao hụt: {diff} {item.unit}</span>
+                                              ) : (
+                                                <span className="text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded-sm border border-emerald-100">Thặng dư: +{diff} {item.unit}</span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-1 text-center text-slate-600 font-bold">{item.unit}</td>
+                                        <td className="py-2 px-1 text-center text-slate-700">{opening}</td>
+                                        <td className="py-2 px-1 text-center text-emerald-700">+{imported}</td>
+                                        <td className="py-2 px-1 text-center text-rose-700">-{exported}</td>
+                                        <td className="py-2 px-1 text-right font-black text-slate-950">{closing}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Dotted border line */}
+                            <div className="mt-3.5 pt-2 border-t border-dashed border-amber-900/20 text-[9px] text-amber-900/60 text-center space-y-0.5 font-bold">
+                              <p className="uppercase text-amber-950">Mẫu biên bản lưu trữ K80</p>
+                              <p>BÌNH DƯƠNG COFFEE & POS SYSTEM</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1079,10 +1203,15 @@ export default function ManagementTab({
 
       {/* --- SUBTAB 4: SALES AND INGREDIENTS CONSUMPTION REPORT --- */}
       {subTab === 'sales' && (() => {
-        // Date filtering
+        // Date/Month filtering
         const filteredInvoices = (invoices || []).filter(inv => {
-          if (!selectedSalesDate) return true;
-          return inv.paymentTime.split('T')[0] === selectedSalesDate;
+          if (salesFilterType === 'day') {
+            if (!selectedSalesDate) return true;
+            return inv.paymentTime.split('T')[0] === selectedSalesDate;
+          } else {
+            if (!selectedSalesMonth) return true;
+            return inv.paymentTime.startsWith(selectedSalesMonth);
+          }
         });
 
         // Calculations
@@ -1144,21 +1273,65 @@ export default function ManagementTab({
         return (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Date Filter Bar */}
-            <div className="p-3 bg-slate-950/80 border-b border-slate-850 shrink-0 flex items-center justify-between gap-2.5 flex-wrap">
-              <div className="flex items-center gap-1.5">
+            <div className="p-3 bg-slate-950/80 border-b border-slate-850 shrink-0 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-black text-orange-400 uppercase tracking-wider">Lọc doanh thu bán ra:</span>
+                
+                {/* Day / Month toggle */}
+                <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setSalesFilterType('day')}
+                    className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                      salesFilterType === 'day'
+                        ? 'bg-orange-500 text-white font-black'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Ngày
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSalesFilterType('month')}
+                    className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                      salesFilterType === 'month'
+                        ? 'bg-orange-500 text-white font-black'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Tháng
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={selectedSalesDate}
-                  onChange={(e) => setSelectedSalesDate(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50"
-                />
+
+              <div className="flex items-center justify-end gap-2">
+                {salesFilterType === 'day' ? (
+                  <input
+                    type="date"
+                    value={selectedSalesDate}
+                    onChange={(e) => setSelectedSalesDate(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50 flex-1 max-w-[150px]"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={selectedSalesMonth}
+                    onChange={(e) => setSelectedSalesMonth(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50 flex-1 max-w-[150px]"
+                  />
+                )}
+                
                 <button
-                  onClick={() => setSelectedSalesDate('')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                    selectedSalesDate === ''
+                  type="button"
+                  onClick={() => {
+                    if (salesFilterType === 'day') {
+                      setSelectedSalesDate('');
+                    } else {
+                      setSelectedSalesMonth('');
+                    }
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    (salesFilterType === 'day' && selectedSalesDate === '') || (salesFilterType === 'month' && selectedSalesMonth === '')
                       ? 'bg-orange-500 border-orange-500 text-white'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
@@ -1173,7 +1346,12 @@ export default function ManagementTab({
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Doanh thu</span>
                 <div>
                   <span className="text-xs font-black text-emerald-400 block truncate">{formatVND(totalRevenue)}</span>
-                  <span className="text-[8px] text-slate-500 font-bold block mt-0.5">Hôm nay</span>
+                  <span className="text-[8px] text-slate-500 font-bold block mt-0.5 truncate">
+                    {salesFilterType === 'day' 
+                      ? (selectedSalesDate ? `Ngày ${selectedSalesDate.split('-').reverse().join('/')}` : 'Tất cả các ngày')
+                      : (selectedSalesMonth ? `Tháng ${selectedSalesMonth.split('-').reverse().slice(0, 2).join('/')}` : 'Tất cả các tháng')
+                    }
+                  </span>
                 </div>
               </div>
 
@@ -1235,7 +1413,7 @@ export default function ManagementTab({
                     </div>
                     {dishSalesList.map((dish, idx) => {
                       const relativeWidth = Math.max(8, (dish.quantity / maxDishQty) * 100);
-                      const catInfo = CATEGORIES.find(c => c.id === dish.category);
+                      const catInfo = categories.find(c => c.id === dish.category);
                       const catLabel = catInfo ? catInfo.name : 'Món khác';
                       const catIcon = catInfo ? catInfo.icon : '☕';
 
@@ -1409,10 +1587,37 @@ export default function ManagementTab({
                     onChange={(e) => setMCategory(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-100"
                   >
-                    {CATEGORIES.map(cat => (
+                    {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>
                         {cat.icon} {cat.name}
                       </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Unit of measurement (Đơn vị tính) */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Đơn vị tính <span className="text-red-400">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Ly, Phần, Đĩa..."
+                    value={mUnit}
+                    onChange={(e) => setMUnit(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-100 font-semibold"
+                  />
+                  <select
+                    value={mUnit}
+                    onChange={(e) => setMUnit(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-400"
+                  >
+                    <option value="">-- Chọn nhanh --</option>
+                    {['Ly', 'Cốc', 'Tách', 'Phần', 'Đĩa', 'Chén', 'Chai', 'Lon', 'Cái', 'Ổ', 'Tô'].map(u => (
+                      <option key={u} value={u}>{u}</option>
                     ))}
                   </select>
                 </div>
@@ -1434,12 +1639,26 @@ export default function ManagementTab({
 
               {/* Image URL with quick options */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Đường dẫn ảnh (URL)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Đường dẫn ảnh (URL)
+                  </label>
+                  {mImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMImageUrl('');
+                        showToast('Đã xóa đường dẫn ảnh của món ăn!');
+                      }}
+                      className="text-[9px] font-black text-rose-400 hover:text-rose-300 flex items-center gap-0.5 active:scale-95 transition-all bg-rose-950/20 px-1.5 py-0.5 rounded border border-rose-900/30"
+                    >
+                      <Trash2 size={9} /> Xóa ảnh hiện tại
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
-                  placeholder="URL liên kết hình ảnh..."
+                  placeholder="Không có ảnh (nhấp mẫu bên dưới hoặc dán link)..."
                   value={mImageUrl}
                   onChange={(e) => setMImageUrl(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-100 text-[10px] font-mono"

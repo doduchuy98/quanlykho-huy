@@ -31,6 +31,7 @@ export interface MenuItem {
   isAvailable: boolean;
   recipe?: MenuItemIngredient[];
   isNew?: boolean;
+  unit?: string;
 }
 
 export interface OrderItem {
@@ -90,6 +91,10 @@ export interface AuditSessionItem {
   systemQty: number;
   actualQty: number;
   difference: number;
+  openingQty?: number;
+  importedQty?: number;
+  exportedQty?: number;
+  closingQty?: number;
 }
 
 export interface AuditSession {

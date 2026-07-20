@@ -25,6 +25,7 @@ interface TablesScreenProps {
   onTableLongPress: (table: Table) => void;
   onAddTableClick: () => void;
   onDeleteZone: (zoneId: string) => void;
+  onAddZone: (zoneName: string) => void;
 }
 
 export default function TablesScreen({
@@ -36,7 +37,8 @@ export default function TablesScreen({
   onTableTap,
   onTableLongPress,
   onAddTableClick,
-  onDeleteZone
+  onDeleteZone,
+  onAddZone
 }: TablesScreenProps) {
   const [elapsedTimers, setElapsedTimers] = useState<Record<string, string>>({});
 
@@ -120,6 +122,19 @@ export default function TablesScreen({
               </button>
             );
           })}
+
+          <button
+            onClick={() => {
+              const name = prompt('Nhập tên khu vực mới (Ví dụ: Tầng 2, Sân vườn, VIP...):');
+              if (name && name.trim()) {
+                onAddZone(name.trim());
+              }
+            }}
+            className="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800/50 border border-dashed border-slate-700/60 text-orange-400 hover:text-orange-300 shrink-0 cursor-pointer"
+          >
+            <Plus size={12} className="stroke-[2.5]" />
+            <span>Thêm khu vực</span>
+          </button>
         </div>
       </div>
 

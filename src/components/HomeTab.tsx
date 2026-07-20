@@ -328,12 +328,18 @@ export default function HomeTab({
                 const ratio = Math.round((item.count / maxSalesCount) * 100);
                 return (
                   <div key={idx} className="flex items-center gap-3">
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name} 
-                      className="w-9 h-9 rounded-lg object-cover border border-slate-800 shrink-0"
-                      referrerPolicy="no-referrer"
-                    />
+                    {item.imageUrl ? (
+                      <img 
+                        src={item.imageUrl} 
+                        alt={item.name} 
+                        className="w-9 h-9 rounded-lg object-cover border border-slate-800 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 text-xs shrink-0 font-bold">
+                        ☕
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start">
                         <span className="text-[10px] text-slate-200 font-bold block truncate pr-2">
