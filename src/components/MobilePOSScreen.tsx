@@ -23,6 +23,8 @@ interface MobilePOSScreenProps {
   onBack: () => void;
   onOpenCart: () => void;
   onTableAction: () => void; // Trigger Change / Merge table
+  onUpdateQuantity?: (orderItemId: string, change: number) => void;
+  onRemoveItem?: (orderItemId: string) => void;
 }
 
 export default function MobilePOSScreen({
@@ -33,7 +35,9 @@ export default function MobilePOSScreen({
   onAddToCart,
   onBack,
   onOpenCart,
-  onTableAction
+  onTableAction,
+  onUpdateQuantity,
+  onRemoveItem
 }: MobilePOSScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState('coffee');
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,46 +134,108 @@ export default function MobilePOSScreen({
 
       {/* Grid Menu Item List (2 Columns) */}
       <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-28">
+        
+        {/* Ordered items list directly on the screen */}
+        {activeOrder && activeOrder.items.length > 0 && (
+          <div className="mb-6 bg-slate-950/40 border border-slate-800/80 rounded-2xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+              <h3 className="text-[10px] font-black text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>📋 Món đã order ({activeOrder.items.reduce((s, i) => s + i.quantity, 0)})</span>
+              </h3>
+              <span className="text-[9px] font-bold text-slate-500 italic">Xem danh sách đầy đủ bên dưới</span>
+            </div>
+            
+            <div className="space-y-2.5">
+              {activeOrder.items.map((item) => {
+                const subTotal = item.price * item.quantity;
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-3 py-1 bg-slate-900/40 p-2 rounded-xl border border-slate-850">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-extrabold text-slate-200 truncate">{item.name}</span>
+                        {item.isNew ? (
+                          <span className="bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse">
+                            Mới thêm
+                          </span>
+                        ) : (
+                          <span className="bg-slate-800 border border-slate-700 text-slate-400 text-[8px] font-bold px-1.5 py-0.5 rounded-md">
+                            Đã gửi bếp
+                          </span>
+                        )}
+                      </div>
+                      {item.notes && (
+                        <p className="text-[9px] text-amber-500/70 font-medium italic mt-0.5">💬 {item.notes}</p>
+                      )}
+                      <p className="text-[9px] text-slate-500 font-bold mt-1">Đơn giá: {formatVND(item.price)}</p>
+                    </div>
+
+                    {/* Quantity controls & Subtotal */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {/* Qty edit section */}
+                      {onUpdateQuantity && onRemoveItem && (
+                        <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+                          <button
+                            onClick={() => {
+                              if (item.quantity === 1) {
+                                if (confirm(`Bạn có chắc muốn xóa món "${item.name}" khỏi hóa đơn?`)) {
+                                  onRemoveItem(item.id);
+                                }
+                              } else {
+                                onUpdateQuantity(item.id, -1);
+                              }
+                            }}
+                            className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white rounded-md hover:bg-slate-900 font-black text-xs"
+                          >
+                            -
+                          </button>
+                          <span className="text-[10px] font-black text-slate-200 px-1.5 min-w-[14px] text-center">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => onUpdateQuantity(item.id, 1)}
+                            className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white rounded-md hover:bg-slate-900 font-black text-xs"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Subtotal price tag */}
+                      <div className="text-right min-w-[65px]">
+                        <span className="text-[11px] font-black text-slate-200 block">{formatVND(subTotal)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-3 border-b border-slate-850 pb-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Thực đơn chọn món</span>
+          {searchQuery && <span className="text-[9px] text-slate-500">Kết quả tìm kiếm cho "{searchQuery}"</span>}
+        </div>
+
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-slate-500">
             <Sparkles size={28} className="stroke-[1.5] text-slate-600 mb-2 animate-pulse" />
             <p className="text-xs">Không tìm thấy món ăn phù hợp</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2.5">
             {filteredItems.map((item) => {
               const inCartQty = getItemQuantityInCart(item.id);
               const isNewlyCreated = item.isNew || item.id.startsWith('m_');
+              const cartItem = activeOrder?.items.find(i => i.menuItemId === item.id);
               
               return (
                 <div
                   key={item.id}
-                  className="bg-slate-850 border border-slate-800/80 rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm relative group"
+                  className="bg-slate-850/80 border border-slate-800/60 p-2.5 rounded-2xl flex items-center justify-between gap-3 relative overflow-hidden group hover:border-slate-700/80 transition-all duration-200"
                 >
-                  {/* Newly Created / Món mới Menu Badge Overlay */}
-                  {isNewlyCreated && (
-                    <div className="absolute top-2 left-2 z-10 bg-amber-400 text-slate-950 text-[8px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-md shadow-amber-400/20 border border-amber-300/30 animate-pulse">
-                      <span>✨</span>
-                      <span>MÓN MỚI</span>
-                    </div>
-                  )}
-
-                  {/* Quantity Badge overlay */}
-                  <AnimatePresence>
-                    {inCartQty > 0 && (
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        className="absolute top-2 right-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg border border-orange-400/20 z-10"
-                      >
-                        {inCartQty}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Product Visual */}
-                  <div className="h-28 overflow-hidden relative bg-slate-900 select-none">
+                  {/* Left part: Image with badge overlays */}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden relative bg-slate-900 select-none shrink-0 border border-slate-800">
                     <img
                       src={item.imageUrl}
                       alt={item.name}
@@ -177,37 +243,90 @@ export default function MobilePOSScreen({
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent"></div>
+                    
+                    {/* Món mới badge */}
+                    {isNewlyCreated && (
+                      <div className="absolute top-0.5 left-0.5 z-10 bg-amber-400 text-slate-950 text-[7px] font-black px-1 py-0.2 rounded shadow-sm border border-amber-350">
+                        NEW
+                      </div>
+                    )}
+                    
+                    {/* Quantity overlay inside the image */}
+                    <AnimatePresence>
+                      {inCartQty > 0 && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          className="absolute bottom-1 right-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-lg border border-orange-400/20"
+                        >
+                          {inCartQty}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
-                  {/* Product Details */}
-                  <div className="p-3 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className="font-bold text-xs text-slate-100 tracking-tight leading-snug line-clamp-1">
-                        {item.name}
-                      </h3>
-                      {item.description && (
-                        <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-1 leading-normal">
-                          {item.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between mt-3 pt-1 border-t border-slate-800/30">
-                      <span className="text-xs font-black text-slate-200 tracking-tight">
+                  {/* Middle part: Details */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-extrabold text-xs text-slate-200 tracking-tight leading-snug truncate">
+                      {item.name}
+                    </h3>
+                    {item.description ? (
+                      <p className="text-[9px] text-slate-500 mt-0.5 line-clamp-1 leading-normal">
+                        {item.description}
+                      </p>
+                    ) : (
+                      <p className="text-[9px] text-slate-600 mt-0.5 italic">Chưa có mô tả món</p>
+                    )}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-[11px] font-black text-orange-400">
                         {formatVND(item.price)}
                       </span>
+                    </div>
+                  </div>
 
-                      {/* Add button designed for thumb reach */}
+                  {/* Right part: Add button / Interactive quantity controls */}
+                  <div className="shrink-0 flex items-center justify-end">
+                    {inCartQty > 0 && cartItem && onUpdateQuantity && onRemoveItem ? (
+                      <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (cartItem.quantity === 1) {
+                              if (confirm(`Bạn có chắc muốn xóa món "${item.name}" khỏi hóa đơn?`)) {
+                                onRemoveItem(cartItem.id);
+                              }
+                            } else {
+                              onUpdateQuantity(cartItem.id, -1);
+                            }
+                          }}
+                          className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 font-black text-xs active:scale-90"
+                        >
+                          -
+                        </button>
+                        <span className="text-[10px] font-black text-slate-200 px-2 min-w-[16px] text-center">
+                          {inCartQty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onUpdateQuantity(cartItem.id, 1)}
+                          className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 font-black text-xs active:scale-90"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
                       <motion.button
-                        whileTap={{ scale: 0.85 }}
+                        whileTap={{ scale: 0.9 }}
+                        type="button"
                         onClick={() => onAddToCart(item)}
-                        className="w-7 h-7 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center justify-center shadow-md shadow-orange-500/10 active:scale-90 transition-all cursor-pointer"
+                        className="h-7 px-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl flex items-center gap-1 shadow-md shadow-orange-500/10 active:scale-90 transition-all cursor-pointer font-black text-[10px]"
                         title="Thêm món"
                       >
-                        <Plus size={16} className="stroke-[2.5]" />
+                        <Plus size={12} className="stroke-[2.5]" />
+                        <span>Thêm</span>
                       </motion.button>
-                    </div>
+                    )}
                   </div>
                 </div>
               );

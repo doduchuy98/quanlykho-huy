@@ -83,3 +83,20 @@ export interface InventoryItem {
   exportedQuantity?: number; // Số lượng xuất
 }
 
+export interface AuditSessionItem {
+  itemId: string;
+  itemName: string;
+  unit: string;
+  systemQty: number;
+  actualQty: number;
+  difference: number;
+}
+
+export interface AuditSession {
+  id: string;
+  date: string;
+  time: string;
+  items: AuditSessionItem[];
+  notes?: string;
+}
+

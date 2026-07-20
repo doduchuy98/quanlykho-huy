@@ -12,7 +12,7 @@ import {
   Home
 } from 'lucide-react';
 
-import { Table, Zone, Order, OrderItem, MenuItem, Invoice, BankConfig, InventoryItem } from './types';
+import { Table, Zone, Order, OrderItem, MenuItem, Invoice, BankConfig, InventoryItem, AuditSession } from './types';
 import { INITIAL_TABLES, INITIAL_ZONES, INITIAL_ORDERS, MENU_ITEMS, INITIAL_INVENTORY } from './data';
 import PhoneFrame from './components/PhoneFrame';
 import TablesScreen from './components/TablesScreen';
@@ -68,6 +68,47 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
   });
 
+  const [auditSessions, setAuditSessions] = useState<AuditSession[]>(() => {
+    const saved = localStorage.getItem('fb_pos_audit_sessions');
+    if (saved) return JSON.parse(saved);
+    
+    // Seed initial audit sessions
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
+
+    return [
+      {
+        id: 'aud_1',
+        date: yesterdayStr,
+        time: `${yesterdayStr}T22:30:00Z`,
+        notes: 'Kiểm kê cuối ngày - Ca tối bàn giao',
+        items: [
+          { itemId: 'i1', itemName: 'Cà phê hạt Robusta', unit: 'kg', systemQty: 25.0, actualQty: 24.8, difference: -0.2 },
+          { itemId: 'i2', itemName: 'Sữa đặc Ngôi Sao', unit: 'lon', systemQty: 50, actualQty: 50, difference: 0 },
+          { itemId: 'i5', itemName: 'Bánh mì tươi (ổ)', unit: 'ổ', systemQty: 8, actualQty: 6, difference: -2 },
+          { itemId: 'i12', itemName: 'Đá viên tinh khiết', unit: 'kg', systemQty: 125, actualQty: 120, difference: -5 }
+        ]
+      },
+      {
+        id: 'aud_2',
+        date: twoDaysAgoStr,
+        time: `${twoDaysAgoStr}T22:15:00Z`,
+        notes: 'Kiểm kê định kỳ đầu tuần',
+        items: [
+          { itemId: 'i1', itemName: 'Cà phê hạt Robusta', unit: 'kg', systemQty: 30.0, actualQty: 30.0, difference: 0 },
+          { itemId: 'i3', itemName: 'Trà đen nguyên lá', unit: 'kg', systemQty: 15.0, actualQty: 14.9, difference: -0.1 },
+          { itemId: 'i4', itemName: 'Trân châu đen Royal', unit: 'kg', systemQty: 20.0, actualQty: 20.0, difference: 0 },
+          { itemId: 'i6', itemName: 'Bơ sáp Đắk Lắk', unit: 'kg', systemQty: 10.0, actualQty: 9.5, difference: -0.5 }
+        ]
+      }
+    ];
+  });
+
   // --- UI FLOW STATES ---
   const [currentTab, setCurrentTab] = useState<'home' | 'tables' | 'history' | 'management' | 'settings'>('home');
 
@@ -120,6 +161,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('fb_pos_inventory_items', JSON.stringify(inventoryItems));
   }, [inventoryItems]);
+
+  useEffect(() => {
+    localStorage.setItem('fb_pos_audit_sessions', JSON.stringify(auditSessions));
+  }, [auditSessions]);
 
   useEffect(() => {
     localStorage.setItem('fb_pos_theme', theme);
@@ -731,6 +776,13 @@ export default function App() {
     showToast('Đã dọn dẹp sạch lịch sử hóa đơn.');
   };
 
+  const handleDeleteZone = (zoneId: string) => {
+    setZones(prev => prev.filter(z => z.id !== zoneId));
+    setTables(prev => prev.filter(t => t.zoneId !== zoneId));
+    setSelectedZoneId('all');
+    showToast('Đã xóa khu vực và tất cả các bàn thuộc khu vực đó.');
+  };
+
   return (
     <PhoneFrame>
       {/* Toast Alert Banner */}
@@ -764,6 +816,8 @@ export default function App() {
             onBack={() => setActiveTableForPOS(null)}
             onOpenCart={() => setIsCartOpen(true)}
             onTableAction={() => setActiveTableForAction(activeTableForPOS)}
+            onUpdateQuantity={handleUpdateQuantity}
+            onRemoveItem={handleRemoveItem}
           />
         ) : (
           /* TAB CONTROLLER */
@@ -802,6 +856,7 @@ export default function App() {
                       onTableTap={handleTableTap}
                       onTableLongPress={handleTableLongPress}
                       onAddTableClick={() => setIsAddTableOpen(true)}
+                      onDeleteZone={handleDeleteZone}
                     />
                   )}
 
@@ -824,6 +879,8 @@ export default function App() {
                       tables={tables}
                       zones={zones}
                       invoices={invoices}
+                      auditSessions={auditSessions}
+                      onUpdateAuditSessions={setAuditSessions}
                     />
                   )}
 

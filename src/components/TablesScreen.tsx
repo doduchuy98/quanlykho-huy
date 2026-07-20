@@ -24,6 +24,7 @@ interface TablesScreenProps {
   onTableTap: (table: Table) => void;
   onTableLongPress: (table: Table) => void;
   onAddTableClick: () => void;
+  onDeleteZone: (zoneId: string) => void;
 }
 
 export default function TablesScreen({
@@ -34,7 +35,8 @@ export default function TablesScreen({
   setSelectedZoneId,
   onTableTap,
   onTableLongPress,
-  onAddTableClick
+  onAddTableClick,
+  onDeleteZone
 }: TablesScreenProps) {
   const [elapsedTimers, setElapsedTimers] = useState<Record<string, string>>({});
 
@@ -120,6 +122,26 @@ export default function TablesScreen({
           })}
         </div>
       </div>
+
+      {/* Delete Zone Bar (only when a specific zone is selected) */}
+      {selectedZoneId !== 'all' && (
+        <div className="bg-slate-950/45 px-4 py-2 border-b border-slate-850 flex justify-between items-center shrink-0">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+            Khu vực: <span className="font-extrabold text-orange-400">{zones.find(z => z.id === selectedZoneId)?.name}</span>
+          </span>
+          <button
+            onClick={() => {
+              const zoneName = zones.find(z => z.id === selectedZoneId)?.name;
+              if (confirm(`⚠️ Bạn có chắc chắn muốn XÓA KHU VỰC "${zoneName}"?\nTất cả các bàn thuộc khu vực này cũng sẽ bị xóa vĩnh viễn.`)) {
+                onDeleteZone(selectedZoneId);
+              }
+            }}
+            className="px-2.5 py-1 bg-red-950/30 hover:bg-red-900/20 text-red-500 hover:text-red-400 font-extrabold border border-red-950/40 rounded-lg text-[9px] transition-all flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer"
+          >
+            🗑️ Xóa khu vực này
+          </button>
+        </div>
+      )}
 
       {/* Quick Stat Bar */}
       <div className="bg-slate-900/50 px-4 py-2 border-b border-slate-800 shrink-0 grid grid-cols-4 gap-2 text-center text-[10px]">

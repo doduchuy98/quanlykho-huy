@@ -23,7 +23,7 @@ import {
   Flame,
   CheckSquare
 } from 'lucide-react';
-import { MenuItem, InventoryItem, Order, Table, Zone, Invoice } from '../types';
+import { MenuItem, InventoryItem, Order, Table, Zone, Invoice, AuditSession } from '../types';
 import { CATEGORIES } from '../data';
 import { formatVND, calculateTimeElapsed } from '../utils';
 import KitchenKdsView from './KitchenKdsView';
@@ -39,6 +39,8 @@ interface ManagementTabProps {
   tables: Table[];
   zones: Zone[];
   invoices: Invoice[];
+  auditSessions: AuditSession[];
+  onUpdateAuditSessions: (sessions: AuditSession[]) => void;
 }
 
 export default function ManagementTab({
@@ -51,16 +53,83 @@ export default function ManagementTab({
   onUpdateOrders,
   tables,
   zones,
-  invoices
+  invoices,
+  auditSessions,
+  onUpdateAuditSessions
 }: ManagementTabProps) {
-  // Navigation sub-tab: 'menu' (Quản lý món), 'inventory' (Quản lý kho), 'kitchen' (Bếp/Bar KDS), or 'sales' (Bán ra trong ngày)
-  const [subTab, setSubTab] = useState<'menu' | 'inventory' | 'kitchen' | 'sales'>('menu');
+  // Navigation sub-tab: 'menu' (Quản lý món), 'inventory' (Quản lý kho), 'audit' (Kiểm kê kho hàng), or 'sales' (Bán ra trong ngày)
+  const [subTab, setSubTab] = useState<'menu' | 'inventory' | 'audit' | 'sales'>('menu');
 
-  // --- KITCHEN/BAR KDS STATES ---
-  const [isFullScreenKds, setIsFullScreenKds] = useState(false);
-  const [kitchenFilter, setKitchenFilter] = useState<'pending' | 'completed'>('pending');
-  // State to track checked item IDs within orders to help staff tick off completed items on their cards
-  const [checkedKitchenItems, setCheckedKitchenItems] = useState<Record<string, boolean>>({});
+  // --- AUDIT STATES ---
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditNotes, setAuditNotes] = useState('');
+  const [auditQuantities, setAuditQuantities] = useState<Record<string, number>>({});
+  const [expandedAuditId, setExpandedAuditId] = useState<string | null>(null);
+
+  const handleOpenNewAudit = () => {
+    const initialQtys: Record<string, number> = {};
+    inventoryItems.forEach(item => {
+      initialQtys[item.id] = item.quantity;
+    });
+    setAuditQuantities(initialQtys);
+    setAuditNotes('');
+    setIsAuditModalOpen(true);
+  };
+
+  const handleSaveAudit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const sessionItems = inventoryItems.map(item => {
+      const actualQty = auditQuantities[item.id] ?? item.quantity;
+      const systemQty = item.quantity;
+      return {
+        itemId: item.id,
+        itemName: item.name,
+        unit: item.unit,
+        systemQty: systemQty,
+        actualQty: actualQty,
+        difference: Number((actualQty - systemQty).toFixed(3))
+      };
+    });
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    
+    const newSession = {
+      id: `aud_${Date.now()}`,
+      date: todayStr,
+      time: now.toISOString(),
+      items: sessionItems,
+      notes: auditNotes.trim() || 'Kiểm kê định kỳ'
+    };
+
+    const updatedInventory = inventoryItems.map(item => {
+      const actualQty = auditQuantities[item.id] ?? item.quantity;
+      return {
+        ...item,
+        initialQuantity: actualQty,
+        quantity: actualQty,
+        importedQuantity: 0,
+        exportedQuantity: 0,
+        lastUpdated: now.toISOString()
+      };
+    });
+
+    onUpdateInventoryItems(updatedInventory);
+    onUpdateAuditSessions([newSession, ...auditSessions]);
+    setIsAuditModalOpen(false);
+    showToast('🎉 Đã hoàn thành kiểm kê ngày! Tồn kho hệ thống đã được cập nhật.');
+  };
+
+  const handleUpdateAuditQty = (itemId: string, val: string) => {
+    const numVal = Number(val);
+    if (!isNaN(numVal) && numVal >= 0) {
+      setAuditQuantities(prev => ({
+        ...prev,
+        [itemId]: numVal
+      }));
+    }
+  };
 
   // --- MENU STATES ---
   const [menuSearch, setMenuSearch] = useState('');
@@ -108,6 +177,7 @@ export default function ManagementTab({
 
   // --- SALES REPORT STATES ---
   const [salesSegment, setSalesSegment] = useState<'dishes' | 'ingredients'>('dishes');
+  const [selectedSalesDate, setSelectedSalesDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
 
   const handleOpenRecipeModal = (item: MenuItem) => {
     setRecipeItem(item);
@@ -511,20 +581,15 @@ export default function ManagementTab({
             )}
           </button>
           <button
-            onClick={() => setSubTab('kitchen')}
+            onClick={() => setSubTab('audit')}
             className={`flex-1 py-2 text-[10px] font-bold rounded-lg flex flex-col sm:flex-row items-center justify-center gap-1 transition-all relative ${
-              subTab === 'kitchen'
+              subTab === 'audit'
                 ? 'bg-orange-500 text-white shadow-md shadow-orange-500/15'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <ChefHat size={12} />
-            <span>Bếp/Bar</span>
-            {pendingKitchenCount > 0 && (
-              <span className="absolute -top-1 right-0.5 w-3.5 h-3.5 rounded-full bg-red-500 text-[8px] font-black flex items-center justify-center text-white ring-2 ring-slate-900 animate-pulse">
-                {pendingKitchenCount}
-              </span>
-            )}
+            <CheckSquare size={12} />
+            <span>Kiểm Kê ({auditSessions?.length || 0})</span>
           </button>
           <button
             onClick={() => setSubTab('sales')}
@@ -894,27 +959,140 @@ export default function ManagementTab({
         </div>
       )}
 
-      {/* --- SUBTAB 3: KITCHEN/BAR KDS SCREEN --- */}
-      {subTab === 'kitchen' && (
-        <KitchenKdsView
-          orders={orders}
-          onUpdateOrders={onUpdateOrders}
-          tables={tables}
-          zones={zones}
-          showToast={showToast}
-        />
+      {/* --- SUBTAB 3: AUDITING / KIỂM KÊ KHO HÀNG --- */}
+      {subTab === 'audit' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header Action Panel */}
+          <div className="p-3 bg-slate-950/45 border-b border-slate-850 shrink-0 flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider">Lịch sử kiểm kê hàng theo ngày</h2>
+              <p className="text-[10px] text-slate-500 mt-0.5">Lịch sử chốt tồn thực tế định kỳ</p>
+            </div>
+            
+            <button
+              onClick={handleOpenNewAudit}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-95 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-orange-500/10 transition-all cursor-pointer"
+            >
+              <Plus size={14} className="stroke-[2.5]" />
+              <span>Bắt đầu kiểm kho</span>
+            </button>
+          </div>
+
+          {/* Audit History List */}
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-none pb-24">
+            {(!auditSessions || auditSessions.length === 0) ? (
+              <div className="flex flex-col items-center justify-center h-48 text-slate-500">
+                <AlertCircle size={28} className="stroke-[1.5] text-slate-600 mb-1.5 animate-pulse" />
+                <p className="text-xs font-medium">Chưa có lịch sử kiểm kê kho nào</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">Nhấp nút ở trên để bắt đầu đợt kiểm kho đầu tiên</p>
+              </div>
+            ) : (
+              auditSessions.map((session) => {
+                const totalDiffCount = session.items.filter(item => item.difference !== 0).length;
+                const isExpanded = expandedAuditId === session.id;
+                const formattedTime = new Date(session.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                const formattedDate = new Date(session.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                return (
+                  <div
+                    key={session.id}
+                    className="bg-slate-950/50 border border-slate-850 rounded-2xl overflow-hidden transition-all duration-200 animate-in fade-in-50"
+                  >
+                    {/* Header Summary Row */}
+                    <div
+                      onClick={() => setExpandedAuditId(isExpanded ? null : session.id)}
+                      className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-900/30 transition-all"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-200">{formattedDate}</span>
+                          <span className="text-[10px] text-slate-500 font-bold">{formattedTime}</span>
+                        </div>
+                        {session.notes && (
+                          <p className="text-[10.5px] text-slate-400 font-medium truncate mt-1">{session.notes}</p>
+                        )}
+                      </div>
+
+                      {/* Summary badges */}
+                      <div className="flex items-center gap-3">
+                        {totalDiffCount > 0 ? (
+                          <span className="bg-red-500/15 border border-red-500/30 text-red-400 text-[9px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
+                            <span>⚠️ Lệch {totalDiffCount} NVL</span>
+                          </span>
+                        ) : (
+                          <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
+                            <span>✅ Khớp hoàn toàn</span>
+                          </span>
+                        )}
+                        
+                        <ChevronRight
+                          size={14}
+                          className={`text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Expanded Detail Table */}
+                    {isExpanded && (
+                      <div className="px-3.5 pb-4 pt-1 border-t border-slate-900 bg-slate-950/20">
+                        <div className="overflow-x-auto scrollbar-none rounded-xl border border-slate-900">
+                          <table className="w-full text-[10px] text-left">
+                            <thead className="bg-slate-900 text-slate-400 font-black tracking-wider uppercase border-b border-slate-850">
+                              <tr>
+                                <th className="py-2 px-3">Nguyên liệu</th>
+                                <th className="py-2 px-2 text-center">Tồn hệ thống</th>
+                                <th className="py-2 px-2 text-center">Thực tế</th>
+                                <th className="py-2 px-3 text-right">Chênh lệch</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-900/60 font-semibold">
+                              {session.items.map((item) => {
+                                return (
+                                  <tr key={item.itemId} className="hover:bg-slate-900/15 transition-all text-slate-300">
+                                    <td className="py-2 px-3 font-bold text-slate-200">{item.itemName}</td>
+                                    <td className="py-2 px-2 text-center text-slate-400">{item.systemQty} <span className="text-[8px] uppercase">{item.unit}</span></td>
+                                    <td className="py-2 px-2 text-center font-bold">{item.actualQty} <span className="text-[8px] uppercase">{item.unit}</span></td>
+                                    <td className="py-2 px-3 text-right whitespace-nowrap">
+                                      {item.difference === 0 ? (
+                                        <span className="text-slate-500">-</span>
+                                      ) : item.difference < 0 ? (
+                                        <span className="text-red-400 font-extrabold">{item.difference} <span className="text-[8px] uppercase">{item.unit}</span></span>
+                                      ) : (
+                                        <span className="text-emerald-400 font-extrabold">+{item.difference} <span className="text-[8px] uppercase">{item.unit}</span></span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       )}
 
       {/* --- SUBTAB 4: SALES AND INGREDIENTS CONSUMPTION REPORT --- */}
       {subTab === 'sales' && (() => {
+        // Date filtering
+        const filteredInvoices = (invoices || []).filter(inv => {
+          if (!selectedSalesDate) return true;
+          return inv.paymentTime.split('T')[0] === selectedSalesDate;
+        });
+
         // Calculations
-        const totalRevenue = (invoices || []).reduce((sum, inv) => sum + inv.finalAmount, 0);
-        const totalInvoicesCount = (invoices || []).length;
-        const totalDishesCount = (invoices || []).reduce((sum, inv) => sum + inv.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
+        const totalRevenue = filteredInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0);
+        const totalInvoicesCount = filteredInvoices.length;
+        const totalDishesCount = filteredInvoices.reduce((sum, inv) => sum + inv.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
 
         // Group dishes
         const dishSalesMap: Record<string, { menuItemId: string; name: string; price: number; quantity: number; category: string; imageUrl: string }> = {};
-        (invoices || []).forEach(invoice => {
+        filteredInvoices.forEach(invoice => {
           invoice.items.forEach(item => {
             if (!dishSalesMap[item.menuItemId]) {
               const originalItem = menuItems.find(m => m.id === item.menuItemId);
@@ -936,7 +1114,7 @@ export default function ManagementTab({
 
         // Group ingredients
         const ingredientConsumptionMap: Record<string, { id: string; name: string; unit: string; quantity: number; currentStock: number; minThreshold: number }> = {};
-        (invoices || []).forEach(invoice => {
+        filteredInvoices.forEach(invoice => {
           invoice.items.forEach(item => {
             const originalItem = menuItems.find(m => m.id === item.menuItemId);
             if (originalItem && originalItem.recipe) {
@@ -965,6 +1143,30 @@ export default function ManagementTab({
 
         return (
           <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Date Filter Bar */}
+            <div className="p-3 bg-slate-950/80 border-b border-slate-850 shrink-0 flex items-center justify-between gap-2.5 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black text-orange-400 uppercase tracking-wider">Lọc doanh thu bán ra:</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={selectedSalesDate}
+                  onChange={(e) => setSelectedSalesDate(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50"
+                />
+                <button
+                  onClick={() => setSelectedSalesDate('')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    selectedSalesDate === ''
+                      ? 'bg-orange-500 border-orange-500 text-white'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Tất cả
+                </button>
+              </div>
+            </div>
             {/* Sales Stats Bento Cards */}
             <div className="p-3 bg-slate-950/45 border-b border-slate-850 shrink-0 grid grid-cols-3 gap-2">
               <div className="bg-slate-950/80 border border-slate-850/80 p-2 rounded-xl flex flex-col justify-between">
@@ -1783,6 +1985,107 @@ export default function ManagementTab({
                 Đóng & Lưu thay đổi
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL E: NEW AUDIT SESSION / PHIẾU KIỂM KÊ MỚI --- */}
+      {isAuditModalOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-in fade-in-50 zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-slate-950 p-4 border-b border-slate-850 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Phiếu kiểm kê kho</h3>
+                <h2 className="text-sm font-black text-orange-400 mt-0.5">Thực tế khớp tồn hệ thống</h2>
+              </div>
+              <button 
+                onClick={() => setIsAuditModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAudit} className="p-4 space-y-4">
+              {/* Scrollable list of items to audit */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Nhập số lượng thực tế kiểm kho
+                </label>
+                
+                <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1 no-scrollbar border border-slate-850/60 p-2 rounded-2xl bg-slate-950/40">
+                  {inventoryItems.map((item) => {
+                    const actual = auditQuantities[item.id] ?? item.quantity;
+                    const diff = Number((actual - item.quantity).toFixed(3));
+                    return (
+                      <div key={item.id} className="bg-slate-900/60 border border-slate-850 p-2.5 rounded-xl flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-slate-200 truncate">{item.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-slate-500 font-bold">Hệ thống: {item.quantity} {item.unit}</span>
+                            {diff === 0 ? (
+                              <span className="text-[9.5px] text-slate-500 font-bold">Khớp</span>
+                            ) : diff < 0 ? (
+                              <span className="text-[9.5px] text-red-500 font-extrabold">Hụt: {diff}</span>
+                            ) : (
+                              <span className="text-[9.5px] text-emerald-500 font-extrabold">Dư: +{diff}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Input element */}
+                        <div className="relative w-28 shrink-0">
+                          <input
+                            type="number"
+                            step={0.001}
+                            min={0}
+                            value={actual}
+                            onChange={(e) => handleUpdateAuditQty(item.id, e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 rounded-xl px-2 py-2 text-xs font-black text-center text-slate-100"
+                            required
+                          />
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500 uppercase">
+                            {item.unit}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Ghi chú phiếu kiểm kê
+                </label>
+                <input
+                  type="text"
+                  value={auditNotes}
+                  onChange={(e) => setAuditNotes(e.target.value)}
+                  placeholder="Ví dụ: Kiểm kho ca tối, bàn giao ca..."
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 rounded-xl px-3 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none font-medium"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2 border-t border-slate-850">
+                <button
+                  type="button"
+                  onClick={() => setIsAuditModalOpen(false)}
+                  className="flex-1 bg-slate-950 border border-slate-800 hover:bg-slate-850 text-slate-400 py-2.5 text-xs font-bold rounded-xl transition-all"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-2.5 text-xs font-black rounded-xl transition-all shadow-md shadow-orange-500/15"
+                >
+                  Lưu & Đồng bộ tồn
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
