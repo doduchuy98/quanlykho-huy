@@ -77,6 +77,7 @@ export interface StoreInfo {
   address: string;
   phone: string;
   announcement?: string;
+  announcementSpeed?: number; // duration of animation in seconds
 }
 
 export interface InventoryItem {

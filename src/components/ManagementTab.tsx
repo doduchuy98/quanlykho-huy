@@ -1282,16 +1282,15 @@ export default function ManagementTab({
         return (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Date Filter Bar */}
-            <div className="p-3 bg-slate-950/80 border-b border-slate-850 shrink-0 flex flex-col gap-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black text-orange-400 uppercase tracking-wider">Lọc doanh thu bán ra:</span>
-                
+            <div className="p-2 bg-slate-950/80 border-b border-slate-850 shrink-0 flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] font-black text-orange-400 uppercase tracking-wider hidden xs:inline">Doanh thu:</span>
                 {/* Day / Month toggle */}
-                <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+                <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => setSalesFilterType('day')}
-                    className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                    className={`px-2 py-0.5 text-[9.5px] font-bold rounded-md transition-all ${
                       salesFilterType === 'day'
                         ? 'bg-orange-500 text-white font-black'
                         : 'text-slate-400 hover:text-slate-200'
@@ -1302,7 +1301,7 @@ export default function ManagementTab({
                   <button
                     type="button"
                     onClick={() => setSalesFilterType('month')}
-                    className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                    className={`px-2 py-0.5 text-[9.5px] font-bold rounded-md transition-all ${
                       salesFilterType === 'month'
                         ? 'bg-orange-500 text-white font-black'
                         : 'text-slate-400 hover:text-slate-200'
@@ -1313,20 +1312,20 @@ export default function ManagementTab({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {salesFilterType === 'day' ? (
                   <input
                     type="date"
                     value={selectedSalesDate}
                     onChange={(e) => setSelectedSalesDate(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50 flex-1 max-w-[150px]"
+                    className="bg-slate-900 border border-slate-850 rounded-lg px-1.5 py-1 text-[10px] text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50 w-[110px]"
                   />
                 ) : (
                   <input
                     type="month"
                     value={selectedSalesMonth}
                     onChange={(e) => setSelectedSalesMonth(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50 flex-1 max-w-[150px]"
+                    className="bg-slate-900 border border-slate-850 rounded-lg px-1.5 py-1 text-[10px] text-orange-400 font-extrabold focus:outline-none focus:border-orange-500/50 w-[110px]"
                   />
                 )}
                 
@@ -1339,9 +1338,9 @@ export default function ManagementTab({
                       setSelectedSalesMonth('');
                     }
                   }}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all shrink-0 ${
                     (salesFilterType === 'day' && selectedSalesDate === '') || (salesFilterType === 'month' && selectedSalesMonth === '')
-                      ? 'bg-orange-500 border-orange-500 text-white'
+                      ? 'bg-orange-500 border-orange-500 text-white font-black'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                 >

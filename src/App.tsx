@@ -9,7 +9,8 @@ import {
   TrendingUp,
   X,
   Layers,
-  Home
+  Home,
+  BarChart3
 } from 'lucide-react';
 
 import { Table, Zone, Order, OrderItem, MenuItem, Invoice, BankConfig, StoreInfo, InventoryItem, AuditSession } from './types';
@@ -25,6 +26,7 @@ import HistoryTab from './components/HistoryTab';
 import SettingsTab from './components/SettingsTab';
 import ManagementTab from './components/ManagementTab';
 import HomeTab from './components/HomeTab';
+import ReportsTab from './components/ReportsTab';
 import ProvisionalModal from './components/ProvisionalModal';
 import { formatVND } from './utils';
 
@@ -65,7 +67,8 @@ export default function App() {
       name: 'BÌNH DƯƠNG COFFEE & POS SYSTEM',
       address: '123 Đường 30 Tháng 4, Thủ Dầu Một',
       phone: '0987.654.321',
-      announcement: '☕ CHÀO MỪNG BẠN ĐẾN VỚI HỆ THỐNG QUẢN LÝ BÁN HÀNG CHUYÊN NGHIỆP - CHÚC BẠN MỘT NGÀY PHỤC VỤ TRÀN ĐẦY NĂNG LƯỢNG VÀ HIỆU QUẢ! 🍹'
+      announcement: '☕ CHÀO MỪNG BẠN ĐẾN VỚI HỆ THỐNG QUẢN LÝ BÁN HÀNG CHUYÊN NGHIỆP - CHÚC BẠN MỘT NGÀY PHỤC VỤ TRÀN ĐẦY NĂNG LƯỢNG VÀ HIỆU QUẢ! 🍹',
+      announcementSpeed: 20
     };
   });
 
@@ -133,7 +136,7 @@ export default function App() {
   });
 
   // --- UI FLOW STATES ---
-  const [currentTab, setCurrentTab] = useState<'home' | 'tables' | 'history' | 'management' | 'settings'>('home');
+  const [currentTab, setCurrentTab] = useState<'home' | 'tables' | 'history' | 'management' | 'settings' | 'reports'>('home');
 
   const [selectedZoneId, setSelectedZoneId] = useState('all');
   const [activeTableForPOS, setActiveTableForPOS] = useState<Table | null>(null);
@@ -960,6 +963,7 @@ export default function App() {
                     <HistoryTab
                       invoices={invoices}
                       onClearHistory={handleClearHistory}
+                      storeInfo={storeInfo}
                     />
                   )}
 
@@ -1000,6 +1004,13 @@ export default function App() {
                       onBackup={handleBackup}
                       onRestore={handleRestore}
                       onWipeData={handleWipeData}
+                    />
+                  )}
+
+                  {currentTab === 'reports' && (
+                    <ReportsTab
+                      invoices={invoices}
+                      menuItems={menuItems}
                     />
                   )}
                 </motion.div>
@@ -1093,6 +1104,28 @@ export default function App() {
                 <span className="relative z-10 flex flex-col items-center justify-center">
                   <Layers size={18} className={currentTab === 'management' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
                   <span className="text-[9px] mt-1">Quản lý</span>
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTableForPOS(null);
+                  setCurrentTab('reports');
+                }}
+                className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1.5 h-12 rounded-2xl transition-all duration-300 ${
+                  currentTab === 'reports' ? 'text-orange-400 font-extrabold' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {currentTab === 'reports' && (
+                  <motion.div
+                    layoutId="activeTabPill"
+                    className="absolute inset-0 bg-orange-500/10 rounded-xl"
+                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                  />
+                )}
+                <span className="relative z-10 flex flex-col items-center justify-center">
+                  <BarChart3 size={18} className={currentTab === 'reports' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
+                  <span className="text-[9px] mt-1">Báo cáo</span>
                 </span>
               </button>
 

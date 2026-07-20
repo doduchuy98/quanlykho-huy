@@ -14,7 +14,8 @@ import {
   Settings as SettingsIcon,
   CheckCircle2,
   Sparkles,
-  Utensils
+  Utensils,
+  BarChart3
 } from 'lucide-react';
 
 import { Table, Zone, Order, Invoice, MenuItem, InventoryItem, StoreInfo } from '../types';
@@ -27,7 +28,7 @@ interface HomeTabProps {
   invoices: Invoice[];
   menuItems: MenuItem[];
   inventoryItems: InventoryItem[];
-  onNavigate: (tab: 'home' | 'tables' | 'history' | 'management' | 'settings') => void;
+  onNavigate: (tab: 'home' | 'tables' | 'history' | 'management' | 'settings' | 'reports') => void;
   onTableTap: (table: Table) => void;
   storeInfo?: StoreInfo;
 }
@@ -130,7 +131,7 @@ export default function HomeTab({
               .marquee-content {
                 display: inline-block;
                 white-space: nowrap;
-                animation: marquee 22s linear infinite;
+                animation: marquee ${storeInfo.announcementSpeed || 20}s linear infinite;
               }
               .marquee-content:hover {
                 animation-play-state: paused;
@@ -243,13 +244,13 @@ export default function HomeTab({
             </button>
 
             <button
-              onClick={() => onNavigate('settings')}
+              onClick={() => onNavigate('reports')}
               className="flex flex-col items-center justify-center p-2.5 bg-slate-850 hover:bg-slate-800 border border-slate-800/80 rounded-xl transition-all cursor-pointer active:scale-95 group"
             >
-              <div className="w-8 h-8 rounded-lg bg-slate-700/20 flex items-center justify-center text-slate-300 border border-slate-700/30 mb-1.5 group-hover:scale-105 transition-all">
-                <SettingsIcon size={15} />
+              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15 mb-1.5 group-hover:scale-105 transition-all">
+                <BarChart3 size={15} />
               </div>
-              <span className="text-[9px] text-slate-300 font-bold whitespace-nowrap">Thiết lập</span>
+              <span className="text-[9px] text-slate-300 font-bold whitespace-nowrap">Báo cáo</span>
             </button>
           </div>
         </div>

@@ -10,19 +10,25 @@ import {
   TrendingUp, 
   ChevronDown, 
   ChevronUp,
-  Inbox
+  Inbox,
+  Eye,
+  Printer,
+  X,
+  FileText
 } from 'lucide-react';
-import { Invoice } from '../types';
+import { Invoice, StoreInfo } from '../types';
 import { formatVND } from '../utils';
 
 interface HistoryTabProps {
   invoices: Invoice[];
   onClearHistory: () => void;
+  storeInfo?: StoreInfo;
 }
 
-export default function HistoryTab({ invoices, onClearHistory }: HistoryTabProps) {
+export default function HistoryTab({ invoices, onClearHistory, storeInfo }: HistoryTabProps) {
   const [filterMethod, setFilterMethod] = useState<'all' | 'cash' | 'vietqr'>('all');
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
+  const [selectedInvoiceForModal, setSelectedInvoiceForModal] = useState<Invoice | null>(null);
 
   // Filtered list
   const filteredInvoices = filterMethod === 'all' 
@@ -229,6 +235,32 @@ export default function HistoryTab({ invoices, onClearHistory }: HistoryTabProps
                               <span className="text-orange-400">{formatVND(inv.finalAmount)}</span>
                             </div>
                           </div>
+
+                          {/* Dual Action Buttons */}
+                          <div className="grid grid-cols-2 gap-2 border-t border-slate-800/60 pt-2.5 mt-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedInvoiceForModal(inv);
+                              }}
+                              className="flex items-center justify-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold py-2 rounded-xl transition-all cursor-pointer active:scale-95"
+                            >
+                              <Eye size={12} className="text-orange-400" />
+                              <span>Xem hóa đơn</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                alert(`🖨️ ĐANG KẾT NỐI TỚI MÁY IN NHIỆT K80...\nĐã xuất hóa đơn thành công!\nBàn: ${inv.tableName}\nMã HD: ${inv.id}\nSố tiền: ${formatVND(inv.finalAmount)}`);
+                              }}
+                              className="flex items-center justify-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-black py-2 rounded-xl transition-all cursor-pointer active:scale-95 shadow-md shadow-orange-500/10"
+                            >
+                              <Printer size={12} />
+                              <span>Xuất hóa đơn</span>
+                            </button>
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -239,6 +271,139 @@ export default function HistoryTab({ invoices, onClearHistory }: HistoryTabProps
           </div>
         )}
       </div>
+
+      {/* Historical Invoice Modal Simulator */}
+      <AnimatePresence>
+        {selectedInvoiceForModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              {/* Header */}
+              <div className="bg-slate-950 px-4 py-3 border-b border-slate-850 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <FileText size={14} className="text-orange-400" />
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Xem Chi Tiết Hóa Đơn</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedInvoiceForModal(null)}
+                  className="w-7 h-7 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Scrollable Receipt Area */}
+              <div className="flex-1 overflow-y-auto p-4 scrollbar-none space-y-4">
+                {/* Paper Thermal Receipt Simulator */}
+                <div 
+                  className="bg-white text-slate-950 p-5 rounded-2xl shadow-inner font-mono text-xs relative overflow-hidden border border-slate-200 select-none"
+                  style={{ backgroundImage: 'linear-gradient(to bottom, #ffffff 95%, #f8f9fa 100%)' }}
+                >
+                  {/* Top jagged paper aesthetic lines */}
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-200 to-transparent"></div>
+
+                  {/* Stamp watermark */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 border-4 border-dashed border-emerald-500 text-emerald-500 rounded-2xl px-4 py-2 font-black text-lg uppercase tracking-widest opacity-20 pointer-events-none select-none select-all">
+                    ĐÃ THANH TOÁN
+                  </div>
+
+                  {/* Receipt Header */}
+                  <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
+                    <h2 className="text-sm font-black tracking-wide uppercase">☕ {storeInfo?.name || 'BÌNH DƯƠNG COFFEE & POS'}</h2>
+                    <p className="text-[10px] text-slate-600">Đ/C: {storeInfo?.address || '123 Đường 30 Tháng 4, Thủ Dầu Một'}</p>
+                    <p className="text-[10px] text-slate-600">SĐT: {storeInfo?.phone || '0987.654.321'}</p>
+                    <div className="pt-2 text-[11px] font-bold text-slate-800">
+                      HÓA ĐƠN THANH TOÁN
+                    </div>
+                  </div>
+
+                  {/* Receipt Metadata */}
+                  <div className="py-3 space-y-1 text-[10px] text-slate-700 border-b border-dashed border-slate-300">
+                    <div className="flex justify-between">
+                      <span>Bàn: <strong>{selectedInvoiceForModal.tableName}</strong></span>
+                      <span>Khu vực: <strong>{selectedInvoiceForModal.zoneName}</strong></span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Thanh toán lúc: {new Date(selectedInvoiceForModal.paymentTime).toLocaleString('vi-VN')}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Mã hóa đơn: {selectedInvoiceForModal.id}</span>
+                      <span>Hình thức: <strong className="text-slate-800 uppercase">{selectedInvoiceForModal.paymentMethod === 'vietqr' ? 'Chuyển khoản' : 'Tiền mặt'}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Ordered Items List */}
+                  <div className="py-3 border-b border-dashed border-slate-300 space-y-2">
+                    <div className="grid grid-cols-12 gap-1 font-bold text-[10px] text-slate-800 pb-1">
+                      <span className="col-span-6">Tên món</span>
+                      <span className="col-span-2 text-center">SL</span>
+                      <span className="col-span-4 text-right">T.Tiền</span>
+                    </div>
+
+                    {selectedInvoiceForModal.items.map((item, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-1 text-[10px] text-slate-700">
+                        <div className="col-span-6 flex flex-col">
+                          <span className="font-semibold">{item.name}</span>
+                          {item.notes && <span className="text-[8px] text-slate-500 italic">({item.notes})</span>}
+                        </div>
+                        <span className="col-span-2 text-center">x{item.quantity}</span>
+                        <span className="col-span-4 text-right font-semibold">{formatVND(item.price * item.quantity)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Cost totals */}
+                  <div className="py-3 space-y-1.5 text-xs text-slate-800 font-bold">
+                    <div className="flex justify-between text-[10px] font-medium text-slate-600">
+                      <span>Tổng tiền hàng:</span>
+                      <span>{formatVND(selectedInvoiceForModal.totalAmount)}</span>
+                    </div>
+                    {selectedInvoiceForModal.discount > 0 && (
+                      <div className="flex justify-between text-[10px] font-bold text-emerald-600">
+                        <span>Chiết khấu/Giảm giá:</span>
+                        <span>-{formatVND(selectedInvoiceForModal.discount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-black pt-2 border-t border-dashed border-slate-300 text-slate-950">
+                      <span>THỰC THU:</span>
+                      <span>{formatVND(selectedInvoiceForModal.finalAmount)}</span>
+                    </div>
+                  </div>
+
+                  {/* Footer message */}
+                  <div className="text-center pt-4 space-y-1 text-[9px] text-slate-500 border-t border-dashed border-slate-200">
+                    <p className="font-bold">CẢM ƠN QUÝ KHÁCH & HẸN GẶP LẠI!</p>
+                    <p className="italic">Powered by Bình Dương POS System</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="p-4 bg-slate-950 border-t border-slate-850 grid grid-cols-2 gap-3 shrink-0">
+                <button
+                  onClick={() => {
+                    alert(`🖨️ ĐANG KẾT NỐI TỚI MÁY IN NHIỆT K80...\nĐã xuất hóa đơn thành công!\nBàn: ${selectedInvoiceForModal.tableName}\nMã HD: ${selectedInvoiceForModal.id}`);
+                  }}
+                  className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 rounded-xl py-3 text-xs font-black shadow-lg shadow-orange-500/10 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Printer size={14} />
+                  <span>Xuất hóa đơn</span>
+                </button>
+                <button
+                  onClick={() => setSelectedInvoiceForModal(null)}
+                  className="flex items-center justify-center bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl py-3 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

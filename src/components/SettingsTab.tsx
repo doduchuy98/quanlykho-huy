@@ -60,6 +60,7 @@ export default function SettingsTab({
   const [storeAddress, setStoreAddress] = useState(storeInfo.address);
   const [storePhone, setStorePhone] = useState(storeInfo.phone);
   const [storeAnnouncement, setStoreAnnouncement] = useState(storeInfo.announcement || '');
+  const [storeAnnouncementSpeed, setStoreAnnouncementSpeed] = useState(storeInfo.announcementSpeed || 20);
   const [isSaved, setIsSaved] = useState(false);
 
   const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +95,8 @@ export default function SettingsTab({
       name: storeName,
       address: storeAddress,
       phone: storePhone,
-      announcement: storeAnnouncement
+      announcement: storeAnnouncement,
+      announcementSpeed: Number(storeAnnouncementSpeed)
     });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
@@ -296,6 +298,27 @@ export default function SettingsTab({
                 rows={2}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-orange-500/50 resize-none font-medium"
               />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] text-slate-400 font-bold">Tốc độ chữ chạy (Giây / chu kỳ)</label>
+              <span className="text-[10px] font-mono text-orange-400 font-bold">
+                {storeAnnouncementSpeed} giây ({storeAnnouncementSpeed <= 10 ? 'Nhanh' : storeAnnouncementSpeed <= 25 ? 'Vừa' : 'Chậm'})
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min="5"
+                max="60"
+                step="1"
+                value={storeAnnouncementSpeed}
+                onChange={(e) => setStoreAnnouncementSpeed(Number(e.target.value))}
+                className="flex-1 accent-orange-500 bg-slate-950 h-1 rounded-lg cursor-pointer"
+              />
+              <span className="text-[9px] font-mono text-slate-500 w-10 text-right">5s - 60s</span>
             </div>
           </div>
         </div>
