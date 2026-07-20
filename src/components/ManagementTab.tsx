@@ -103,6 +103,8 @@ export default function ManagementTab({
   const [recipeItem, setRecipeItem] = useState<MenuItem | null>(null);
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
   const [ingredientQuantity, setIngredientQuantity] = useState<string>('0.1');
+  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState<string>('');
 
   // --- SALES REPORT STATES ---
   const [salesSegment, setSalesSegment] = useState<'dishes' | 'ingredients'>('dishes');
@@ -110,6 +112,8 @@ export default function ManagementTab({
   const handleOpenRecipeModal = (item: MenuItem) => {
     setRecipeItem(item);
     setIsRecipeModalOpen(true);
+    setEditingIngredientId(null);
+    setEditingQuantity('');
     
     // Suggest first ingredient that is not already in the recipe
     const existingIds = item.recipe?.map(r => r.inventoryItemId) || [];
@@ -120,6 +124,36 @@ export default function ManagementTab({
       setSelectedIngredientId('');
     }
     setIngredientQuantity('0.1');
+  };
+
+  const handleSaveEditedIngredient = (ingredientId: string) => {
+    if (!recipeItem) return;
+    const qty = Number(editingQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      showToast('Vui lòng nhập định lượng hợp lệ!');
+      return;
+    }
+
+    const currentRecipe = recipeItem.recipe || [];
+    const updatedRecipe = currentRecipe.map(r => {
+      if (r.inventoryItemId === ingredientId) {
+        return { ...r, quantity: qty };
+      }
+      return r;
+    });
+
+    const updatedMenuItems = menuItems.map(item => {
+      if (item.id === recipeItem.id) {
+        const nextItem = { ...item, recipe: updatedRecipe };
+        setRecipeItem(nextItem);
+        return nextItem;
+      }
+      return item;
+    });
+
+    onUpdateMenuItems(updatedMenuItems);
+    showToast('Đã cập nhật định lượng nguyên liệu!');
+    setEditingIngredientId(null);
   };
 
   const handleAddIngredientToRecipe = (e: React.FormEvent) => {
@@ -1597,6 +1631,7 @@ export default function ManagementTab({
                     {recipeItem.recipe.map((rec, idx) => {
                       const ingredient = inventoryItems.find(i => i.id === rec.inventoryItemId);
                       if (!ingredient) return null;
+                      const isEditing = editingIngredientId === rec.inventoryItemId;
                       return (
                         <div key={idx} className="bg-slate-950 rounded-xl p-2.5 border border-slate-850/80 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -1608,19 +1643,64 @@ export default function ManagementTab({
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <span className="text-xs font-black text-orange-400">{rec.quantity}</span>
-                              <span className="text-[10px] text-slate-400 ml-1">{ingredient.unit}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveIngredientFromRecipe(rec.inventoryItemId)}
-                              className="p-1 rounded-md text-red-400 hover:text-red-300 bg-red-950/20 hover:bg-red-950/40 transition-all border border-red-900/10"
-                              title="Xóa nguyên liệu khỏi công thức"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                          <div className="flex items-center gap-2">
+                            {isEditing ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  step={0.001}
+                                  min={0.001}
+                                  value={editingQuantity}
+                                  onChange={(e) => setEditingQuantity(e.target.value)}
+                                  className="w-20 bg-slate-900 border border-orange-500 rounded-lg px-2 py-1 text-xs font-black text-orange-400 text-center focus:outline-none"
+                                  placeholder="Định mức"
+                                  autoFocus
+                                />
+                                <span className="text-[10px] text-slate-400 mr-1">{ingredient.unit}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveEditedIngredient(rec.inventoryItemId)}
+                                  className="p-1 rounded-md text-emerald-400 hover:bg-emerald-950/40 border border-emerald-900/15"
+                                  title="Lưu định lượng"
+                                >
+                                  <Check size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingIngredientId(null)}
+                                  className="p-1 rounded-md text-slate-400 hover:bg-slate-800 border border-slate-800"
+                                  title="Hủy"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="text-right">
+                                  <span className="text-xs font-black text-orange-400">{rec.quantity}</span>
+                                  <span className="text-[10px] text-slate-400 ml-1">{ingredient.unit}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingIngredientId(rec.inventoryItemId);
+                                    setEditingQuantity(rec.quantity.toString());
+                                  }}
+                                  className="p-1 rounded-md text-slate-400 hover:text-orange-400 hover:bg-orange-950/20 transition-all border border-slate-800/60"
+                                  title="Sửa định lượng"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveIngredientFromRecipe(rec.inventoryItemId)}
+                                  className="p-1 rounded-md text-red-400 hover:text-red-300 bg-red-950/20 hover:bg-red-950/40 transition-all border border-red-900/10"
+                                  title="Xóa nguyên liệu khỏi công thức"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
