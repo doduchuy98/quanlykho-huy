@@ -23,7 +23,7 @@ import {
   Flame,
   CheckSquare
 } from 'lucide-react';
-import { MenuItem, InventoryItem, Order, Table, Zone, Invoice, AuditSession } from '../types';
+import { MenuItem, InventoryItem, Order, Table, Zone, Invoice, AuditSession, StoreInfo } from '../types';
 import { formatVND, calculateTimeElapsed } from '../utils';
 import KitchenKdsView from './KitchenKdsView';
 
@@ -42,6 +42,7 @@ interface ManagementTabProps {
   onUpdateAuditSessions: (sessions: AuditSession[]) => void;
   categories: { id: string; name: string; icon: string }[];
   onUpdateCategories: (categories: { id: string; name: string; icon: string }[]) => void;
+  storeInfo?: StoreInfo;
 }
 
 export default function ManagementTab({
@@ -58,7 +59,8 @@ export default function ManagementTab({
   auditSessions,
   onUpdateAuditSessions,
   categories,
-  onUpdateCategories
+  onUpdateCategories,
+  storeInfo
 }: ManagementTabProps) {
   // Navigation sub-tab: 'menu' (Quản lý món), 'inventory' (Quản lý kho), 'audit' (Kiểm kê kho hàng), or 'sales' (Bán ra trong ngày)
   const [subTab, setSubTab] = useState<'menu' | 'inventory' | 'audit' | 'sales'>('menu');
@@ -1139,15 +1141,17 @@ export default function ManagementTab({
 
                             {/* Ticket Items Grid Table */}
                             <div className="overflow-x-auto no-scrollbar">
-                              <table className="w-full text-[10px] text-left border-collapse min-w-[340px]">
+                              <table className="w-full text-[10px] text-left border-collapse min-w-[420px]">
                                 <thead>
                                   <tr className="border-b-2 border-amber-900/20 text-amber-950 font-black tracking-wider text-[9px] uppercase">
                                     <th className="py-1.5 px-1 text-left">TÊN NL</th>
-                                    <th className="py-1.5 px-1 text-center w-10">ĐVT</th>
-                                    <th className="py-1.5 px-1 text-center w-12">TĐ</th>
-                                    <th className="py-1.5 px-1 text-center w-12 text-emerald-800">NHẬP</th>
-                                    <th className="py-1.5 px-1 text-center w-12 text-rose-800">XUẤT</th>
-                                    <th className="py-1.5 px-1 text-right w-14">TC</th>
+                                    <th className="py-1.5 px-1 text-center w-8">ĐVT</th>
+                                    <th className="py-1.5 px-1 text-center w-10">TĐ</th>
+                                    <th className="py-1.5 px-1 text-center w-10 text-emerald-800">NHẬP</th>
+                                    <th className="py-1.5 px-1 text-center w-10 text-rose-800">XUẤT</th>
+                                    <th className="py-1.5 px-1 text-center w-10">L.THUYẾT</th>
+                                    <th className="py-1.5 px-1 text-center w-10 font-bold">THỰC TẾ</th>
+                                    <th className="py-1.5 px-1 text-right w-12 text-amber-950">CHÊNH LỆCH</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-amber-900/10 text-slate-800">
@@ -1155,7 +1159,8 @@ export default function ManagementTab({
                                     const opening = item.openingQty ?? item.systemQty;
                                     const imported = item.importedQty ?? 0;
                                     const exported = item.exportedQty ?? 0;
-                                    const closing = item.closingQty ?? item.actualQty;
+                                    const expected = item.systemQty;
+                                    const actual = item.actualQty;
                                     const diff = item.difference;
 
                                     return (
@@ -1176,7 +1181,11 @@ export default function ManagementTab({
                                         <td className="py-2 px-1 text-center text-slate-700">{opening}</td>
                                         <td className="py-2 px-1 text-center text-emerald-700">+{imported}</td>
                                         <td className="py-2 px-1 text-center text-rose-700">-{exported}</td>
-                                        <td className="py-2 px-1 text-right font-black text-slate-950">{closing}</td>
+                                        <td className="py-2 px-1 text-center text-slate-750 font-medium">{expected}</td>
+                                        <td className="py-2 px-1 text-center font-black text-slate-950">{actual}</td>
+                                        <td className={`py-2 px-1 text-right font-black ${diff < 0 ? 'text-rose-600' : diff > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                          {diff > 0 ? `+${diff}` : diff}
+                                        </td>
                                       </tr>
                                     );
                                   })}
@@ -1187,7 +1196,7 @@ export default function ManagementTab({
                             {/* Dotted border line */}
                             <div className="mt-3.5 pt-2 border-t border-dashed border-amber-900/20 text-[9px] text-amber-900/60 text-center space-y-0.5 font-bold">
                               <p className="uppercase text-amber-950">Mẫu biên bản lưu trữ K80</p>
-                              <p>BÌNH DƯƠNG COFFEE & POS SYSTEM</p>
+                              <p>{storeInfo?.name || 'BÌNH DƯƠNG COFFEE & POS SYSTEM'}</p>
                             </div>
                           </div>
                         </div>
@@ -1826,15 +1835,26 @@ export default function ManagementTab({
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                     Đơn vị tính <span className="text-red-400">*</span>
                   </label>
-                  <select
-                    value={invUnit}
-                    onChange={(e) => setInvUnit(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-100"
-                  >
-                    {['kg', 'g', 'lít', 'ml', 'lon', 'hộp', 'chai', 'ổ', 'bao', 'thùng', 'cái', 'viên'].map(u => (
-                      <option key={u} value={u}>{u}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1">
+                    <input
+                      type="text"
+                      required
+                      placeholder="kg, g, lít..."
+                      value={invUnit}
+                      onChange={(e) => setInvUnit(e.target.value)}
+                      className="w-1/2 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-100 font-semibold"
+                    />
+                    <select
+                      value={invUnit}
+                      onChange={(e) => setInvUnit(e.target.value)}
+                      className="w-1/2 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-1 py-2 text-[10px] focus:outline-none focus:border-orange-500 text-slate-400"
+                    >
+                      <option value="">-- Chọn --</option>
+                      {['kg', 'g', 'lít', 'ml', 'lon', 'hộp', 'chai', 'ổ', 'bao', 'thùng', 'cái', 'viên'].map(u => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div>

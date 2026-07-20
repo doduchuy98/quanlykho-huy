@@ -49,14 +49,22 @@ export default function QuickActionModal({
 
   const handleMove = () => {
     if (!targetTableId) return;
-    onMoveTable(table.id, targetTableId);
-    onClose();
+    const targetTable = allTables.find(t => t.id === targetTableId);
+    const targetName = targetTable ? targetTable.name : 'Bàn mới';
+    if (confirm(`Bạn có chắc chắn muốn CHUYỂN toàn bộ hóa đơn từ [${table.name}] sang [${targetName}] không?`)) {
+      onMoveTable(table.id, targetTableId);
+      onClose();
+    }
   };
 
   const handleMerge = () => {
     if (!targetTableId) return;
-    onMergeTable(table.id, targetTableId);
-    onClose();
+    const targetTable = allTables.find(t => t.id === targetTableId);
+    const targetName = targetTable ? targetTable.name : 'Bàn gộp';
+    if (confirm(`Bạn có chắc chắn muốn GHÉP/GỘP toàn bộ hóa đơn từ [${table.name}] vào [${targetName}] không?`)) {
+      onMergeTable(table.id, targetTableId);
+      onClose();
+    }
   };
 
   const handleSaveGuests = () => {

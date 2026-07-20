@@ -72,6 +72,13 @@ export interface BankConfig {
   accountName: string;
 }
 
+export interface StoreInfo {
+  name: string;
+  address: string;
+  phone: string;
+  announcement?: string;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;

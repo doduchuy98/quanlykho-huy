@@ -218,7 +218,11 @@ export default function CartBottomSheet({
                       )}
 
                       <button
-                        onClick={() => onRemoveItem(item.id)}
+                        onClick={() => {
+                          if (confirm(`Bạn có chắc chắn muốn xóa món [${item.name}] khỏi danh sách gọi món không?`)) {
+                            onRemoveItem(item.id);
+                          }
+                        }}
                         className="p-1 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-900"
                         title="Xóa món"
                       >
@@ -275,7 +279,11 @@ export default function CartBottomSheet({
           {/* Primary Operations Buttons */}
           <div className="grid grid-cols-2 gap-3 mt-1 pb-2">
             <button
-              onClick={onProvisionalBill}
+              onClick={() => {
+                if (confirm('Bạn có chắc chắn muốn xuất Phiếu Tạm Tính cho bàn này không?')) {
+                  onProvisionalBill();
+                }
+              }}
               className="flex items-center justify-center gap-1.5 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl py-3 text-xs font-bold active:scale-95 transition-all cursor-pointer"
             >
               <FileText size={14} className="text-orange-400" />
@@ -283,7 +291,11 @@ export default function CartBottomSheet({
             </button>
 
             <button
-              onClick={onProceedToPayment}
+              onClick={() => {
+                if (confirm('Bạn có chắc chắn muốn tiến hành Thanh toán QR cho hóa đơn này không?')) {
+                  onProceedToPayment();
+                }
+              }}
               className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl py-3 text-xs font-extrabold shadow-lg shadow-emerald-500/10 active:scale-95 transition-all cursor-pointer"
             >
               <CreditCard size={14} />

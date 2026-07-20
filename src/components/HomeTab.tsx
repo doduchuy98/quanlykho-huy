@@ -17,7 +17,7 @@ import {
   Utensils
 } from 'lucide-react';
 
-import { Table, Zone, Order, Invoice, MenuItem, InventoryItem } from '../types';
+import { Table, Zone, Order, Invoice, MenuItem, InventoryItem, StoreInfo } from '../types';
 import { formatVND } from '../utils';
 
 interface HomeTabProps {
@@ -29,6 +29,7 @@ interface HomeTabProps {
   inventoryItems: InventoryItem[];
   onNavigate: (tab: 'home' | 'tables' | 'history' | 'management' | 'settings') => void;
   onTableTap: (table: Table) => void;
+  storeInfo?: StoreInfo;
 }
 
 export default function HomeTab({
@@ -39,7 +40,8 @@ export default function HomeTab({
   menuItems,
   inventoryItems,
   onNavigate,
-  onTableTap
+  onTableTap,
+  storeInfo
 }: HomeTabProps) {
   const [timeStr, setTimeStr] = useState('');
 
@@ -113,6 +115,34 @@ export default function HomeTab({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-slate-900 h-full">
+      {/* Custom Scrolling Announcement Banner */}
+      {storeInfo?.announcement && (
+        <div className="bg-orange-500/10 border-b border-orange-500/20 py-2 px-4 overflow-hidden whitespace-nowrap select-none shrink-0 flex items-center gap-3">
+          <span className="text-[9px] font-black tracking-wider uppercase bg-orange-500 text-slate-950 px-2 py-0.5 rounded-md shrink-0 shadow-xs shadow-orange-500/10">
+            Thông báo
+          </span>
+          <div className="relative flex-1 overflow-hidden flex items-center h-4">
+            <style>{`
+              @keyframes marquee {
+                0% { transform: translateX(100%); }
+                100% { transform: translateX(-100%); }
+              }
+              .marquee-content {
+                display: inline-block;
+                white-space: nowrap;
+                animation: marquee 22s linear infinite;
+              }
+              .marquee-content:hover {
+                animation-play-state: paused;
+              }
+            `}</style>
+            <div className="marquee-content font-bold text-[10.5px] text-orange-400 tracking-wide">
+              {storeInfo.announcement}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scrollable Container */}
       <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-24 space-y-4">
         

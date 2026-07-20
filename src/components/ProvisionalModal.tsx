@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { motion } from 'motion/react';
 import { X, Printer, Receipt, Sparkles } from 'lucide-react';
-import { Order, Table } from '../types';
+import { Order, Table, StoreInfo } from '../types';
 import { formatVND } from '../utils';
 
 interface ProvisionalModalProps {
@@ -10,6 +10,7 @@ interface ProvisionalModalProps {
   activeOrder: Order | null;
   table: Table | null;
   zoneName: string;
+  storeInfo?: StoreInfo;
 }
 
 export default function ProvisionalModal({
@@ -17,7 +18,8 @@ export default function ProvisionalModal({
   onClose,
   activeOrder,
   table,
-  zoneName
+  zoneName,
+  storeInfo
 }: ProvisionalModalProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -72,9 +74,9 @@ export default function ProvisionalModal({
 
             {/* Receipt Header */}
             <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
-              <h2 className="text-sm font-black tracking-wide uppercase">☕ BÌNH DƯƠNG COFFEE & POS</h2>
-              <p className="text-[10px] text-slate-600">Đ/C: 123 Đường 30 Tháng 4, Thủ Dầu Một</p>
-              <p className="text-[10px] text-slate-600">SĐT: 0987.654.321</p>
+              <h2 className="text-sm font-black tracking-wide uppercase">☕ {storeInfo?.name || 'BÌNH DƯƠNG COFFEE & POS'}</h2>
+              <p className="text-[10px] text-slate-600">Đ/C: {storeInfo?.address || '123 Đường 30 Tháng 4, Thủ Dầu Một'}</p>
+              <p className="text-[10px] text-slate-600">SĐT: {storeInfo?.phone || '0987.654.321'}</p>
               <div className="pt-2 text-[11px] font-bold text-slate-800">
                 PHIẾU TẠM TÍNH
               </div>

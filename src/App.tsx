@@ -12,7 +12,7 @@ import {
   Home
 } from 'lucide-react';
 
-import { Table, Zone, Order, OrderItem, MenuItem, Invoice, BankConfig, InventoryItem, AuditSession } from './types';
+import { Table, Zone, Order, OrderItem, MenuItem, Invoice, BankConfig, StoreInfo, InventoryItem, AuditSession } from './types';
 import { INITIAL_TABLES, INITIAL_ZONES, INITIAL_ORDERS, MENU_ITEMS, INITIAL_INVENTORY } from './data';
 import PhoneFrame from './components/PhoneFrame';
 import TablesScreen from './components/TablesScreen';
@@ -56,6 +56,16 @@ export default function App() {
       bankId: 'mbb',
       accountNo: '190367890209',
       accountName: 'AN NAM COFFEE AND FOOD'
+    };
+  });
+
+  const [storeInfo, setStoreInfo] = useState<StoreInfo>(() => {
+    const saved = localStorage.getItem('fb_pos_store_info');
+    return saved ? JSON.parse(saved) : {
+      name: 'BÌNH DƯƠNG COFFEE & POS SYSTEM',
+      address: '123 Đường 30 Tháng 4, Thủ Dầu Một',
+      phone: '0987.654.321',
+      announcement: '☕ CHÀO MỪNG BẠN ĐẾN VỚI HỆ THỐNG QUẢN LÝ BÁN HÀNG CHUYÊN NGHIỆP - CHÚC BẠN MỘT NGÀY PHỤC VỤ TRÀN ĐẦY NĂNG LƯỢNG VÀ HIỆU QUẢ! 🍹'
     };
   });
 
@@ -169,6 +179,10 @@ export default function App() {
   }, [bankConfig]);
 
   useEffect(() => {
+    localStorage.setItem('fb_pos_store_info', JSON.stringify(storeInfo));
+  }, [storeInfo]);
+
+  useEffect(() => {
     localStorage.setItem('fb_pos_menu_items', JSON.stringify(menuItems));
   }, [menuItems]);
 
@@ -270,6 +284,67 @@ export default function App() {
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  // --- BACKUP & RESTORE DATA HELPERS ---
+  const handleBackup = () => {
+    const backupData = {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      zones,
+      tables,
+      orders,
+      invoices,
+      bankConfig,
+      storeInfo,
+      menuItems,
+      inventoryItems,
+      auditSessions,
+      categories
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fb_pos_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Đã xuất file sao lưu dữ liệu thành công!');
+  };
+
+  const handleRestore = (importedData: any) => {
+    try {
+      if (!importedData || typeof importedData !== 'object') {
+        throw new Error('Dữ liệu không hợp lệ');
+      }
+      if (importedData.zones) setZones(importedData.zones);
+      if (importedData.tables) setTables(importedData.tables);
+      if (importedData.orders) setOrders(importedData.orders);
+      if (importedData.invoices) setInvoices(importedData.invoices);
+      if (importedData.bankConfig) setBankConfig(importedData.bankConfig);
+      if (importedData.storeInfo) setStoreInfo(importedData.storeInfo);
+      if (importedData.menuItems) setMenuItems(importedData.menuItems);
+      if (importedData.inventoryItems) setInventoryItems(importedData.inventoryItems);
+      if (importedData.auditSessions) setAuditSessions(importedData.auditSessions);
+      if (importedData.categories) setCategories(importedData.categories);
+      
+      showToast('Đã khôi phục dữ liệu hệ thống thành công!');
+      return true;
+    } catch (e) {
+      console.error(e);
+      showToast('Khôi phục thất bại: Tệp tin không đúng cấu trúc.');
+      return false;
+    }
+  };
+
+  const handleWipeData = () => {
+    localStorage.clear();
+    showToast('🚀 Đã xóa toàn bộ dữ liệu thành công! Đang khởi động lại hệ thống...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
   };
 
   // --- HELPERS ---
@@ -862,6 +937,7 @@ export default function App() {
                       inventoryItems={inventoryItems}
                       onNavigate={setCurrentTab}
                       onTableTap={handleTableTap}
+                      storeInfo={storeInfo}
                     />
                   )}
 
@@ -903,6 +979,7 @@ export default function App() {
                       onUpdateAuditSessions={setAuditSessions}
                       categories={categories}
                       onUpdateCategories={setCategories}
+                      storeInfo={storeInfo}
                     />
                   )}
 
@@ -910,6 +987,8 @@ export default function App() {
                     <SettingsTab
                       bankConfig={bankConfig}
                       onUpdateBankConfig={setBankConfig}
+                      storeInfo={storeInfo}
+                      onUpdateStoreInfo={setStoreInfo}
                       theme={theme}
                       onChangeTheme={setTheme}
                       accentColor={accentColor}
@@ -918,6 +997,9 @@ export default function App() {
                       onChangeRadius={setRadius}
                       fontFamily={fontFamily}
                       onChangeFontFamily={setFontFamily}
+                      onBackup={handleBackup}
+                      onRestore={handleRestore}
+                      onWipeData={handleWipeData}
                     />
                   )}
                 </motion.div>
@@ -1066,6 +1148,7 @@ export default function App() {
             activeOrder={getActiveOrderForTable(activeTableForPOS.id)}
             table={activeTableForPOS}
             zoneName={getZoneName(activeTableForPOS.zoneId)}
+            storeInfo={storeInfo}
           />
         )}
 

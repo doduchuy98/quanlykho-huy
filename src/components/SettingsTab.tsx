@@ -8,14 +8,21 @@ import {
   MapPin, 
   CheckCircle,
   HelpCircle,
-  Coins
+  Coins,
+  Phone,
+  Download,
+  Upload,
+  Database,
+  RefreshCw
 } from 'lucide-react';
-import { BankConfig } from '../types';
+import { BankConfig, StoreInfo } from '../types';
 import { LIST_OF_BANKS } from '../data';
 
 interface SettingsTabProps {
   bankConfig: BankConfig;
   onUpdateBankConfig: (config: BankConfig) => void;
+  storeInfo: StoreInfo;
+  onUpdateStoreInfo: (info: StoreInfo) => void;
   theme: 'light' | 'dark';
   onChangeTheme: (theme: 'light' | 'dark') => void;
   accentColor: 'orange' | 'emerald' | 'blue' | 'purple' | 'rose';
@@ -24,11 +31,16 @@ interface SettingsTabProps {
   onChangeRadius: (radius: 'sharp' | 'medium' | 'round') => void;
   fontFamily: 'inter' | 'outfit' | 'space-grotesk' | 'playfair' | 'mono';
   onChangeFontFamily: (font: 'inter' | 'outfit' | 'space-grotesk' | 'playfair' | 'mono') => void;
+  onBackup: () => void;
+  onRestore: (data: any) => boolean;
+  onWipeData?: () => void;
 }
 
 export default function SettingsTab({ 
   bankConfig, 
   onUpdateBankConfig,
+  storeInfo,
+  onUpdateStoreInfo,
   theme,
   onChangeTheme,
   accentColor,
@@ -36,14 +48,40 @@ export default function SettingsTab({
   radius,
   onChangeRadius,
   fontFamily,
-  onChangeFontFamily
+  onChangeFontFamily,
+  onBackup,
+  onRestore,
+  onWipeData
 }: SettingsTabProps) {
   const [bankId, setBankId] = useState(bankConfig.bankId);
   const [accountNo, setAccountNo] = useState(bankConfig.accountNo);
   const [accountName, setAccountName] = useState(bankConfig.accountName);
-  const [storeName, setStoreName] = useState('An Nam Coffee & Food');
-  const [storeAddress, setStoreAddress] = useState('120 Trần Hưng Đạo, Quận 1, TP. HCM');
+  const [storeName, setStoreName] = useState(storeInfo.name);
+  const [storeAddress, setStoreAddress] = useState(storeInfo.address);
+  const [storePhone, setStorePhone] = useState(storeInfo.phone);
+  const [storeAnnouncement, setStoreAnnouncement] = useState(storeInfo.announcement || '');
   const [isSaved, setIsSaved] = useState(false);
+
+  const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        const confirmRestore = window.confirm('⚠️ CẢNH BÁO: Hành động này sẽ thay thế TOÀN BỘ dữ liệu hiện tại của hệ thống (Món ăn, Kho hàng, Sơ đồ bàn, Hóa đơn...) bằng dữ liệu từ tệp tin khôi phục.\n\nBạn có chắc chắn muốn tiếp tục?');
+        if (confirmRestore) {
+          onRestore(parsed);
+        }
+      } catch (err) {
+        alert('Tệp tin không đúng định dạng JSON.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +89,12 @@ export default function SettingsTab({
       bankId,
       accountNo,
       accountName
+    });
+    onUpdateStoreInfo({
+      name: storeName,
+      address: storeAddress,
+      phone: storePhone,
+      announcement: storeAnnouncement
     });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
@@ -226,6 +270,34 @@ export default function SettingsTab({
               <MapPin size={12} className="absolute left-2.5 top-3 text-slate-500" />
             </div>
           </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] text-slate-400 font-bold">Số điện thoại</label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={storePhone}
+                onChange={(e) => setStorePhone(e.target.value)}
+                placeholder="Nhập số điện thoại của cửa hàng..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-8 pr-3 text-xs text-slate-200 focus:outline-none focus:border-orange-500/50"
+              />
+              <Phone size={12} className="absolute left-2.5 top-3 text-slate-500" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] text-slate-400 font-bold">Chữ chạy thông báo (Trang chủ)</label>
+            <div className="relative">
+              <textarea
+                value={storeAnnouncement}
+                onChange={(e) => setStoreAnnouncement(e.target.value)}
+                placeholder="Nhập nội dung thông báo để chạy ngang ở đầu trang chủ..."
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-orange-500/50 resize-none font-medium"
+              />
+            </div>
+          </div>
         </div>
 
         {/* 2. Bank QR Info Section */}
@@ -299,6 +371,83 @@ export default function SettingsTab({
           <span>LƯU CẤU HÌNH HỆ THỐNG</span>
         </button>
       </form>
+
+      {/* Backup & Restore Section */}
+      <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800/80 flex flex-col gap-3 mt-4">
+        <div className="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <Database size={14} className="text-orange-400" />
+          <span>Sao lưu & Khôi phục Dữ liệu</span>
+        </div>
+        
+        <p className="text-[10px] text-slate-400 leading-relaxed">
+          Xuất toàn bộ cơ sở dữ liệu hiện tại (thực đơn, kho hàng, bàn, sơ đồ, hóa đơn, lịch sử bán hàng...) ra tệp tin <code className="text-orange-400 font-bold">.json</code> để lưu trữ, hoặc khôi phục lại khi cần thiết.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3 mt-1.5">
+          <button
+            type="button"
+            onClick={onBackup}
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-black transition-all border bg-slate-950 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 active:scale-95 cursor-pointer"
+          >
+            <Download size={13} className="text-orange-400" />
+            <span>SAO LƯU (BACKUP)</span>
+          </button>
+          
+          <div className="relative">
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleRestoreFile}
+              className="hidden"
+              id="restore-upload-input"
+            />
+            <label
+              htmlFor="restore-upload-input"
+              className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-black transition-all border bg-slate-950 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 active:scale-95 cursor-pointer text-center h-full flex justify-center items-center"
+            >
+              <Upload size={13} className="text-emerald-400" />
+              <span>KHÔI PHỤC (RESTORE)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Wipe All Data Section */}
+      <div className="bg-slate-850 p-4 rounded-2xl border border-red-900/30 flex flex-col gap-3 mt-4">
+        <div className="text-xs font-bold text-red-400 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <span>⚠️</span>
+          <span>Khu vực Nguy hiểm (Danger Zone)</span>
+        </div>
+        
+        <p className="text-[10px] text-slate-400 leading-relaxed">
+          Xóa vĩnh viễn toàn bộ dữ liệu trong hệ thống (Hóa đơn, Món ăn, Nguyên liệu, Lịch sử kiểm kho, Cài đặt bàn). Hệ thống sẽ được khôi phục về trạng thái ban đầu. Hành động này không thể hoàn tác.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => {
+            const password = prompt('🔑 VUI LÒNG NHẬP MẬT KHẨU ĐỂ XÓA TOÀN BỘ DỮ LIỆU:\n(Mật khẩu mặc định là: 123456)');
+            if (password === null) return;
+            if (password === '123456') {
+              const confirm1 = confirm('⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA TOÀN BỘ DỮ LIỆU KHÔNG?\nTất cả hóa đơn, thực đơn, sơ đồ bàn và nguyên vật liệu kho sẽ bị xóa sạch hoàn toàn.');
+              if (confirm1) {
+                const confirm2 = confirm('🚨 ĐÂY LÀ XÁC NHẬN CUỐI CÙNG!\nToàn bộ dữ liệu sẽ biến mất vĩnh viễn và trang web sẽ tự động tải lại.\nBạn có chắc chắn muốn tiếp tục?');
+                if (confirm2) {
+                  if (onWipeData) {
+                    onWipeData();
+                  }
+                }
+              }
+            } else {
+              alert('❌ Mật khẩu xác nhận không chính xác!');
+            }
+          }}
+          className="w-full bg-red-950/40 hover:bg-red-900/25 border border-red-900/50 text-red-400 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all mt-1 cursor-pointer"
+        >
+          <span>🗑️</span>
+          <span>XÓA SẠCH TOÀN BỘ DỮ LIỆU HỆ THỐNG</span>
+        </button>
+      </div>
     </div>
   );
 }
