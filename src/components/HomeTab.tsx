@@ -116,34 +116,6 @@ export default function HomeTab({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-slate-900 h-full">
-      {/* Custom Scrolling Announcement Banner */}
-      {storeInfo?.announcement && (
-        <div className="bg-orange-500/10 border-b border-orange-500/20 py-2 px-4 overflow-hidden whitespace-nowrap select-none shrink-0 flex items-center gap-3">
-          <span className="text-[9px] font-black tracking-wider uppercase bg-orange-500 text-slate-950 px-2 py-0.5 rounded-md shrink-0 shadow-xs shadow-orange-500/10">
-            Thông báo
-          </span>
-          <div className="relative flex-1 overflow-hidden flex items-center h-4">
-            <style>{`
-              @keyframes marquee {
-                0% { transform: translateX(100%); }
-                100% { transform: translateX(-100%); }
-              }
-              .marquee-content {
-                display: inline-block;
-                white-space: nowrap;
-                animation: marquee ${storeInfo.announcementSpeed || 20}s linear infinite;
-              }
-              .marquee-content:hover {
-                animation-play-state: paused;
-              }
-            `}</style>
-            <div className="marquee-content font-bold text-[10.5px] text-orange-400 tracking-wide">
-              {storeInfo.announcement}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Scrollable Container */}
       <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-24 space-y-4">
         
@@ -160,7 +132,7 @@ export default function HomeTab({
           </div>
           <div className="text-right">
             <span className="font-mono text-sm font-black text-slate-200 block bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl shadow-xs">
-              ⏱️ {timeStr || '00:00:00'}
+              {timeStr || '00:00:00'}
             </span>
             <span className="text-[9px] text-slate-500 font-bold mt-1 block">
               {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' })}
@@ -188,23 +160,42 @@ export default function HomeTab({
             </div>
           </div>
 
-          {/* Table Occupancy Widget */}
-          <div className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex flex-col justify-between shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-400 font-bold">Hiệu suất sử dụng bàn</span>
-              <div className="w-6 h-6 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15">
-                <Activity size={12} />
+          {/* Table Occupancy Widget OR Total Orders Widget */}
+          {storeInfo?.fbMode !== false ? (
+            <div className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 font-bold">Hiệu suất sử dụng bàn</span>
+                <div className="w-6 h-6 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15">
+                  <Activity size={12} />
+                </div>
+              </div>
+              <div className="mt-2.5">
+                <span className="text-sm font-black text-orange-400 block">
+                  {tableOccupancyRate}%
+                </span>
+                <span className="text-[9px] text-slate-500 font-bold mt-0.5 block">
+                  Đang dùng: {activeTablesCount}/{tables.length} bàn ({currentGuestsCount} khách)
+                </span>
               </div>
             </div>
-            <div className="mt-2.5">
-              <span className="text-sm font-black text-orange-400 block">
-                {tableOccupancyRate}%
-              </span>
-              <span className="text-[9px] text-slate-500 font-bold mt-0.5 block">
-                Đang dùng: {activeTablesCount}/{tables.length} bàn ({currentGuestsCount} khách)
-              </span>
+          ) : (
+            <div className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 font-bold">Số lượng đơn hàng</span>
+                <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/15">
+                  <ShoppingBag size={12} />
+                </div>
+              </div>
+              <div className="mt-2.5">
+                <span className="text-sm font-black text-blue-400 block">
+                  {totalInvoicesCount} đơn hàng
+                </span>
+                <span className="text-[9px] text-slate-500 font-bold mt-0.5 block">
+                  Phục vụ trực tiếp & mang về hôm nay
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* High-Ergonomic Quick Shortcuts Menu */}
@@ -213,15 +204,37 @@ export default function HomeTab({
             Lối tắt chức năng nhanh
           </h3>
           <div className="grid grid-cols-4 gap-2">
-            <button
-              onClick={() => onNavigate('tables')}
-              className="flex flex-col items-center justify-center p-2.5 bg-slate-850 hover:bg-slate-800 border border-slate-800/80 rounded-xl transition-all cursor-pointer active:scale-95 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15 mb-1.5 group-hover:scale-105 transition-all">
-                <Grid3X3 size={15} />
-              </div>
-              <span className="text-[9px] text-slate-300 font-bold whitespace-nowrap">Sơ đồ bàn</span>
-            </button>
+            {storeInfo?.fbMode !== false ? (
+              <button
+                onClick={() => onNavigate('tables')}
+                className="flex flex-col items-center justify-center p-2.5 bg-slate-850 hover:bg-slate-800 border border-slate-800/80 rounded-xl transition-all cursor-pointer active:scale-95 group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15 mb-1.5 group-hover:scale-105 transition-all">
+                  <Grid3X3 size={15} />
+                </div>
+                <span className="text-[9px] text-slate-300 font-bold whitespace-nowrap">Sơ đồ bàn</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  const retailTable = {
+                    id: 'retail',
+                    name: 'Khách mua mang về',
+                    status: 'active' as const,
+                    zoneId: 'direct',
+                    guestCount: 1,
+                    checkInTime: new Date().toISOString()
+                  };
+                  onTableTap(retailTable);
+                }}
+                className="flex flex-col items-center justify-center p-2.5 bg-slate-850 hover:bg-slate-800 border border-slate-800/80 rounded-xl transition-all cursor-pointer active:scale-95 group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15 mb-1.5 group-hover:scale-105 transition-all">
+                  <ShoppingBag size={15} />
+                </div>
+                <span className="text-[9px] text-slate-300 font-bold whitespace-nowrap">Tạo đơn nhanh</span>
+              </button>
+            )}
 
             <button
               onClick={() => onNavigate('history')}
@@ -282,64 +295,116 @@ export default function HomeTab({
           </div>
         )}
 
-        {/* Live Active Tables Overview */}
-        <div className="bg-slate-850 rounded-2xl border border-slate-800 p-3.5 space-y-2.5">
-          <div className="flex justify-between items-center">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Utensils size={11} className="text-orange-400" /> Hoạt động bàn trực tiếp
-            </h3>
-            <button 
-              onClick={() => onNavigate('tables')} 
-              className="text-[9px] font-bold text-orange-400 hover:text-orange-300 flex items-center gap-0.5"
-            >
-              Xem tất cả <ArrowRight size={10} />
-            </button>
-          </div>
-
-          {occupiedTables.length === 0 ? (
-            <div className="text-center py-6 text-slate-500">
-              <CheckCircle2 size={24} className="mx-auto text-emerald-500/30 mb-1.5" />
-              <p className="text-[10px] font-semibold">Tất cả các bàn hiện đang trống!</p>
-              <p className="text-[9px] text-slate-600 mt-0.5">Ấn nút "Sơ đồ bàn" để mở bàn mới đón khách.</p>
+        {/* Dynamic section based on operation mode */}
+        {storeInfo?.fbMode !== false ? (
+          /* Live Active Tables Overview (F&B Mode) */
+          <div className="bg-slate-850 rounded-2xl border border-slate-800 p-3.5 space-y-2.5">
+            <div className="flex justify-between items-center">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Utensils size={11} className="text-orange-400" /> Hoạt động bàn trực tiếp
+              </h3>
+              <button 
+                onClick={() => onNavigate('tables')} 
+                className="text-[9px] font-bold text-orange-400 hover:text-orange-300 flex items-center gap-0.5"
+              >
+                Xem tất cả <ArrowRight size={10} />
+              </button>
             </div>
-          ) : (
-            <div className="flex flex-col gap-2 max-h-56 overflow-y-auto scrollbar-none">
-              {occupiedTables.map(table => {
-                const isBilling = table.status === 'billing';
-                return (
-                  <div 
-                    key={table.id}
-                    onClick={() => onTableTap(table)}
-                    className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-between transition-all cursor-pointer active:scale-98"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-3.5 h-3.5 rounded-full ${
-                        isBilling ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'
-                      }`} />
-                      <div>
-                        <span className="text-[10px] text-slate-200 font-black block">{table.name}</span>
-                        <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold mt-0.5">
-                          <span>👤 {table.guestCount} khách</span>
-                          <span>•</span>
-                          <span>⏱️ {getElapsedTimeStr(table.checkInTime)}</span>
+
+            {occupiedTables.length === 0 ? (
+              <div className="text-center py-6 text-slate-500">
+                <CheckCircle2 size={24} className="mx-auto text-emerald-500/30 mb-1.5" />
+                <p className="text-[10px] font-semibold">Tất cả các bàn hiện đang trống!</p>
+                <p className="text-[9px] text-slate-600 mt-0.5">Ấn nút "Sơ đồ bàn" để mở bàn mới đón khách.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-56 overflow-y-auto scrollbar-none">
+                {occupiedTables.map(table => {
+                  const isBilling = table.status === 'billing';
+                  const isOverLimit = table.checkInTime && (new Date().getTime() - new Date(table.checkInTime).getTime() >= 60 * 60 * 1000);
+                  return (
+                    <div 
+                      key={table.id}
+                      onClick={() => onTableTap(table)}
+                      className={`p-2.5 hover:bg-slate-800 border rounded-xl flex items-center justify-between transition-all cursor-pointer active:scale-98 ${
+                        isOverLimit 
+                          ? 'bg-red-500/10 border-red-500/40 animate-[pulse_1.5s_infinite] shadow-md shadow-red-500/5' 
+                          : 'bg-slate-900 border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-3.5 h-3.5 rounded-full ${
+                          isOverLimit 
+                            ? 'bg-red-500 animate-pulse' 
+                            : isBilling 
+                              ? 'bg-amber-500 animate-pulse' 
+                              : 'bg-emerald-500 animate-pulse'
+                        }`} />
+                        <div>
+                          <span className={`text-[10px] font-black block flex items-center gap-1 ${isOverLimit ? 'text-red-300' : 'text-slate-200'}`}>
+                            {isOverLimit && <span className="text-red-500 animate-pulse">⚠️</span>}
+                            {table.name}
+                          </span>
+                          <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold mt-0.5">
+                            <span>👤 {table.guestCount} khách</span>
+                            <span>•</span>
+                            <span className={isOverLimit ? 'text-red-400 animate-pulse' : ''}>
+                              {getElapsedTimeStr(table.checkInTime)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <div>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase ${
+                          isOverLimit
+                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                            : isBilling 
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        }`}>
+                          {isOverLimit ? 'Ngồi lâu' : isBilling ? 'Thanh toán' : 'Đang ăn'}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase ${
-                        isBilling 
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
-                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      }`}>
-                        {isBilling ? 'Thanh toán' : 'Đang ăn'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Direct Sales Quick Launch (Retail / Takeaway Mode) */
+          <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/5 rounded-2xl border border-orange-500/15 p-4 space-y-3 shadow-md shadow-orange-500/5">
+            <div className="flex justify-between items-center">
+              <h3 className="text-[10.5px] font-black text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                <ShoppingBag size={12} className="text-orange-400" /> Quầy bán lẻ trực tiếp
+              </h3>
+              <span className="text-[9px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-full uppercase">
+                Chế độ Bán lẻ / Mang đi
+              </span>
             </div>
-          )}
-        </div>
+            
+            <p className="text-[10px] text-slate-400 font-medium leading-normal">
+              Bạn đang hoạt động ở chế độ bán lẻ trực tiếp & mang về. Tạo hóa đơn thanh toán nhanh ngay lập tức cho khách vãng lai mà không cần quản lý phòng bàn phức tạp.
+            </p>
+
+            <button
+              onClick={() => {
+                const retailTable = {
+                  id: 'retail',
+                  name: 'Khách mua mang về',
+                  status: 'active' as const,
+                  zoneId: 'direct',
+                  guestCount: 1,
+                  checkInTime: new Date().toISOString()
+                };
+                onTableTap(retailTable);
+              }}
+              className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-2 transition-all active:scale-98 shadow-lg shadow-orange-500/15 cursor-pointer"
+            >
+              <span>🛒</span> Bắt đầu tạo đơn & Thanh toán ngay
+            </button>
+          </div>
+        )}
 
         {/* Top Products / Popular Items Section */}
         <div className="bg-slate-850 rounded-2xl border border-slate-800 p-3.5 space-y-2.5">

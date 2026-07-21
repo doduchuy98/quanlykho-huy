@@ -10,16 +10,15 @@ export function calculateTimeElapsed(checkInTimeStr?: string): string {
   const checkIn = new Date(checkInTimeStr);
   const now = new Date();
   const diffMs = now.getTime() - checkIn.getTime();
-  if (diffMs < 0) return '0p';
+  if (diffMs < 0) return '00:00:00';
   
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) {
-    return `${diffMins}p`;
-  } else {
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    return mins > 0 ? `${hours}h ${mins}p` : `${hours}h`;
-  }
+  const totalSecs = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
 }
 
 export function generateVietQRUrl(

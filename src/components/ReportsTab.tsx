@@ -15,8 +15,30 @@ import {
   TrendingDown,
   Percent
 } from 'lucide-react';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 import { Invoice, MenuItem } from '../types';
 import { formatVND } from '../utils';
+
+// Styled custom tooltip for Recharts daily trend
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-950/95 border border-slate-800 px-3 py-2 rounded-xl shadow-xl backdrop-blur-md">
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{payload[0].payload.name}</p>
+        <p className="text-xs font-black text-orange-400 mt-0.5">{formatVND(payload[0].value)}</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 interface ReportsTabProps {
   invoices: Invoice[];
@@ -113,31 +135,31 @@ export default function ReportsTab({ invoices, menuItems }: ReportsTabProps) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-slate-900 h-full">
       {/* Header and Filter */}
-      <div className="p-4 bg-slate-950 border-b border-slate-850 shrink-0 flex flex-col gap-3">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15">
-              <BarChart3 size={15} />
+      <div className="p-2.5 sm:p-4 bg-slate-950 border-b border-slate-850 shrink-0 flex flex-col gap-3">
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/15 shrink-0">
+              <BarChart3 size={12} />
             </div>
-            <div>
-              <h2 className="text-xs font-black text-slate-200 uppercase tracking-wide">Báo Cáo Hoạt Động</h2>
-              <p className="text-[9px] text-slate-500">Số liệu phân tích tài chính & bán hàng</p>
+            <div className="min-w-0">
+              <h2 className="text-[10px] sm:text-xs font-black text-slate-200 uppercase tracking-wide whitespace-nowrap truncate">Báo Cáo Hoạt Động</h2>
+              <p className="text-[8px] sm:text-[9px] text-slate-500 whitespace-nowrap truncate">Số liệu phân tích tài chính & bán hàng</p>
             </div>
           </div>
 
-          <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+          <div className="flex flex-row flex-nowrap bg-slate-900 border border-slate-800 rounded-lg p-0.5 shrink-0">
             {(['all', 'today', 'week', 'month'] as const).map(period => (
               <button
                 key={period}
                 type="button"
                 onClick={() => setTimePeriod(period)}
-                className={`px-2.5 py-1 text-[9.5px] font-bold rounded-md transition-all uppercase ${
+                className={`px-2 sm:px-2.5 py-1 text-[8px] sm:text-[9.5px] font-black rounded-md transition-all uppercase whitespace-nowrap shrink-0 flex items-center justify-center ${
                   timePeriod === period
-                    ? 'bg-orange-500 text-slate-950 font-black shadow-xs shadow-orange-500/10'
+                    ? 'bg-orange-500 text-slate-950 shadow-xs shadow-orange-500/10'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {period === 'all' ? 'Tất cả' : period === 'today' ? 'Hôm nay' : period === 'week' ? '7 ngày' : 'Tháng'}
+                {period === 'all' ? 'Tất\u00a0cả' : period === 'today' ? 'Hôm\u00a0nay' : period === 'week' ? '7\u00a0ngày' : 'Tháng'}
               </button>
             ))}
           </div>
@@ -213,38 +235,50 @@ export default function ReportsTab({ invoices, menuItems }: ReportsTabProps) {
         {/* Weekly Revenue Trend Chart */}
         <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Doanh thu 7 ngày qua</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Xu hướng doanh thu 7 ngày qua</span>
             <span className="text-[9px] font-mono text-slate-500">Mức cao nhất: {formatVND(maxDailyAmount)}</span>
           </div>
 
-          {/* Bar Chart Representation */}
-          <div className="h-32 flex items-end justify-between gap-1.5 pt-4 border-b border-slate-800 pb-1">
-            {dailyTrendData.map((data, idx) => {
-              const heightPercent = maxDailyAmount > 0 ? (data.amount / maxDailyAmount) * 100 : 0;
-              const isToday = idx === dailyTrendData.length - 1;
-
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                  {/* Tooltip on hover */}
-                  <div className="absolute bottom-full mb-1 bg-slate-950 border border-slate-800 px-1.5 py-0.5 rounded text-[8px] font-mono text-orange-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    {formatVND(data.amount)}
-                  </div>
-                  {/* Bar */}
-                  <div 
-                    style={{ height: `${Math.max(heightPercent, 5)}%` }}
-                    className={`w-full rounded-t-md transition-all duration-500 cursor-pointer ${
-                      isToday 
-                        ? 'bg-gradient-to-t from-orange-600 to-amber-500 shadow-xs shadow-orange-500/20' 
-                        : 'bg-slate-700 group-hover:bg-orange-500/50'
-                    }`}
-                  />
-                  {/* Label */}
-                  <span className="text-[8px] font-bold text-slate-500 mt-2 truncate max-w-full text-center">
-                    {data.name}
-                  </span>
-                </div>
-              );
-            })}
+          {/* Interactive Recharts Area Chart */}
+          <div className="h-44 w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={dailyTrendData}
+                margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#64748b" 
+                  fontSize={8} 
+                  tickLine={false}
+                  axisLine={false}
+                  dy={6}
+                />
+                <YAxis 
+                  stroke="#64748b" 
+                  fontSize={8} 
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val) => val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
+                />
+                <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: '#f97316', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                <Area 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#f97316" 
+                  strokeWidth={2.5}
+                  fillOpacity={1} 
+                  fill="url(#colorRevenue)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

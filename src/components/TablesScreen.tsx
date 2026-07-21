@@ -42,7 +42,7 @@ export default function TablesScreen({
 }: TablesScreenProps) {
   const [elapsedTimers, setElapsedTimers] = useState<Record<string, string>>({});
 
-  // Live elapsed time tick updating every 30 seconds
+  // Live elapsed time tick updating every 1 second
   useEffect(() => {
     const updateAllTimers = () => {
       const timers: Record<string, string> = {};
@@ -55,7 +55,7 @@ export default function TablesScreen({
     };
 
     updateAllTimers();
-    const interval = setInterval(updateAllTimers, 30000);
+    const interval = setInterval(updateAllTimers, 1000);
     return () => clearInterval(interval);
   }, [tables]);
 
@@ -204,6 +204,9 @@ export default function TablesScreen({
                 const amount = getTableAmount(table.id);
                 const sittingTime = elapsedTimers[table.id] || '';
                 
+                // Active for > 60 minutes stay alert
+                const isOverLimit = table.checkInTime && table.status !== 'empty' && (new Date().getTime() - new Date(table.checkInTime).getTime() >= 60 * 60 * 1000);
+                
                 // Color mapping
                 let bgClass = 'bg-slate-800/40 border-slate-700/40 text-slate-300';
                 let statusColor = 'bg-slate-500';
@@ -211,15 +214,29 @@ export default function TablesScreen({
                 let statusLabel = 'Trống';
 
                 if (table.status === 'active') {
-                  bgClass = 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/15';
-                  statusColor = 'bg-amber-500';
-                  accentColor = 'border-amber-500/50';
-                  statusLabel = 'Đang ngồi';
+                  if (isOverLimit) {
+                    bgClass = 'bg-red-500/10 border-red-500/40 hover:bg-red-500/15 animate-[pulse_1.5s_infinite] shadow-lg shadow-red-500/10';
+                    statusColor = 'bg-red-500';
+                    accentColor = 'border-red-500/50';
+                    statusLabel = 'Ngồi lâu';
+                  } else {
+                    bgClass = 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/15';
+                    statusColor = 'bg-amber-500';
+                    accentColor = 'border-amber-500/50';
+                    statusLabel = 'Đang ngồi';
+                  }
                 } else if (table.status === 'billing') {
-                  bgClass = 'bg-emerald-500/10 border-emerald-500/35 hover:bg-emerald-500/15 animate-[pulse_3s_infinite]';
-                  statusColor = 'bg-emerald-500';
-                  accentColor = 'border-emerald-500/50';
-                  statusLabel = 'Tính tiền';
+                  if (isOverLimit) {
+                    bgClass = 'bg-red-500/10 border-red-500/40 hover:bg-red-500/15 animate-[pulse_1.5s_infinite] shadow-lg shadow-red-500/10';
+                    statusColor = 'bg-red-500';
+                    accentColor = 'border-red-500/50';
+                    statusLabel = 'Ngồi lâu';
+                  } else {
+                    bgClass = 'bg-emerald-500/10 border-emerald-500/35 hover:bg-emerald-500/15 animate-[pulse_3s_infinite]';
+                    statusColor = 'bg-emerald-500';
+                    accentColor = 'border-emerald-500/50';
+                    statusLabel = 'Tính tiền';
+                  }
                 }
 
                 return (
@@ -241,7 +258,8 @@ export default function TablesScreen({
 
                     {/* Table Header with name & action menu button */}
                     <div className="flex justify-between items-start pt-1">
-                      <span className="font-bold text-sm text-slate-100 tracking-tight leading-tight group-hover:text-orange-400 transition-colors">
+                      <span className={`font-bold text-sm tracking-tight leading-tight transition-colors ${isOverLimit ? 'text-red-300 group-hover:text-red-400' : 'text-slate-100 group-hover:text-orange-400'}`}>
+                        {isOverLimit && <span className="text-red-500 mr-0.5 animate-pulse">⚠️</span>}
                         {table.name}
                       </span>
                       
@@ -265,9 +283,8 @@ export default function TablesScreen({
                           <span>👥 {table.guestCount} khách</span>
                         </div>
                         {sittingTime && (
-                          <div className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold">
-                            <Clock size={10} className="text-slate-400" />
-                            <span>⏳ {sittingTime}</span>
+                          <div className={`flex items-center gap-1 text-[10px] font-semibold ${isOverLimit ? 'text-red-400 animate-pulse' : 'text-slate-400'}`}>
+                            <span>{sittingTime}</span>
                           </div>
                         )}
                       </div>

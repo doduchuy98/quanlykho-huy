@@ -78,6 +78,7 @@ export interface StoreInfo {
   phone: string;
   announcement?: string;
   announcementSpeed?: number; // duration of animation in seconds
+  fbMode?: boolean; // true = F&B Mode (with tables), false = Direct POS / Retail Mode
 }
 
 export interface InventoryItem {

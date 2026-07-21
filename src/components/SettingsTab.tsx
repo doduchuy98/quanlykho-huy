@@ -61,6 +61,7 @@ export default function SettingsTab({
   const [storePhone, setStorePhone] = useState(storeInfo.phone);
   const [storeAnnouncement, setStoreAnnouncement] = useState(storeInfo.announcement || '');
   const [storeAnnouncementSpeed, setStoreAnnouncementSpeed] = useState(storeInfo.announcementSpeed || 20);
+  const [storeFbMode, setStoreFbMode] = useState(storeInfo.fbMode !== false);
   const [isSaved, setIsSaved] = useState(false);
 
   const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +97,8 @@ export default function SettingsTab({
       address: storeAddress,
       phone: storePhone,
       announcement: storeAnnouncement,
-      announcementSpeed: Number(storeAnnouncementSpeed)
+      announcementSpeed: Number(storeAnnouncementSpeed),
+      fbMode: storeFbMode
     });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
@@ -285,6 +287,42 @@ export default function SettingsTab({
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-8 pr-3 text-xs text-slate-200 focus:outline-none focus:border-orange-500/50"
               />
               <Phone size={12} className="absolute left-2.5 top-3 text-slate-500" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 mt-1 border-t border-slate-800/60 pt-3">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Chế độ hoạt động (F&B vs Bán lẻ)
+            </span>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setStoreFbMode(true)}
+                className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-left transition-all active:scale-98 ${
+                  storeFbMode
+                    ? 'bg-orange-500/10 border-orange-500/80 text-orange-400 shadow-md shadow-orange-500/5'
+                    : 'bg-slate-950 border-slate-800/60 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="text-xs font-black">☕ Chế độ F&B</span>
+                <span className="text-[8.5px] text-slate-500 mt-1 font-semibold text-center leading-normal">
+                  Quản lý theo sơ đồ bàn, phòng & khu vực. Phục vụ tại bàn.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStoreFbMode(false)}
+                className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-left transition-all active:scale-98 ${
+                  !storeFbMode
+                    ? 'bg-orange-500/10 border-orange-500/80 text-orange-400 shadow-md shadow-orange-500/5'
+                    : 'bg-slate-950 border-slate-800/60 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="text-xs font-black">🛍️ Bán lẻ / Mang đi</span>
+                <span className="text-[8.5px] text-slate-500 mt-1 font-semibold text-center leading-normal">
+                  Tạo đơn hàng trực tiếp không qua sơ đồ bàn. Bán mang đi nhanh.
+                </span>
+              </button>
             </div>
           </div>
 

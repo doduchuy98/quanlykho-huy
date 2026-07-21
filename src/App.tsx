@@ -344,6 +344,29 @@ export default function App() {
 
   const handleWipeData = () => {
     localStorage.clear();
+    localStorage.setItem('fb_pos_zones', JSON.stringify([]));
+    localStorage.setItem('fb_pos_tables', JSON.stringify([]));
+    localStorage.setItem('fb_pos_orders', JSON.stringify([]));
+    localStorage.setItem('fb_pos_invoices', JSON.stringify([]));
+    localStorage.setItem('fb_pos_menu_items', JSON.stringify([]));
+    localStorage.setItem('fb_pos_inventory_items', JSON.stringify([]));
+    localStorage.setItem('fb_pos_categories', JSON.stringify([]));
+    localStorage.setItem('fb_pos_audit_sessions', JSON.stringify([]));
+    
+    localStorage.setItem('fb_pos_bank_config', JSON.stringify({
+      bankId: '',
+      accountNo: '',
+      accountName: ''
+    }));
+    
+    localStorage.setItem('fb_pos_store_info', JSON.stringify({
+      name: '',
+      address: '',
+      phone: '',
+      announcement: '',
+      announcementSpeed: 20
+    }));
+
     showToast('🚀 Đã xóa toàn bộ dữ liệu thành công! Đang khởi động lại hệ thống...');
     setTimeout(() => {
       window.location.reload();
@@ -352,6 +375,7 @@ export default function App() {
 
   // --- HELPERS ---
   const getZoneName = (zoneId: string) => {
+    if (zoneId === 'direct') return 'Bán lẻ trực tiếp';
     const z = zones.find(item => item.id === zoneId);
     return z ? z.name : 'Chưa phân khu';
   };
@@ -364,36 +388,44 @@ export default function App() {
 
   // Tap on a Table card
   const handleTableTap = (table: Table) => {
-    if (table.status === 'empty') {
-      // 1. Instantly set state of the table to active
-      const updatedTables = tables.map(t => {
-        if (t.id === table.id) {
-          return {
-            ...t,
-            status: 'active' as const,
-            guestCount: 2,
-            checkInTime: new Date().toISOString()
-          };
-        }
-        return t;
-      });
-      setTables(updatedTables);
+    const existingOrder = getActiveOrderForTable(table.id);
 
-      // 2. Create a new active order session
-      const newOrderId = `ord_${table.id}_${Date.now().toString().slice(-4)}`;
-      const newOrder: Order = {
-        id: newOrderId,
-        tableId: table.id,
-        items: [],
-        status: 'active',
-        startTime: new Date().toISOString(),
-        totalAmount: 0
-      };
-      setOrders(prev => [...prev, newOrder]);
+    if (table.status === 'empty' || !existingOrder) {
+      // 1. Instantly set state of the table to active if it's not the virtual retail table
+      if (table.id !== 'retail') {
+        const updatedTables = tables.map(t => {
+          if (t.id === table.id) {
+            return {
+              ...t,
+              status: 'active' as const,
+              guestCount: 2,
+              checkInTime: new Date().toISOString()
+            };
+          }
+          return t;
+        });
+        setTables(updatedTables);
+      }
+
+      // 2. Create a new active order session if it doesn't exist
+      if (!existingOrder) {
+        const newOrderId = `ord_${table.id}_${Date.now().toString().slice(-4)}`;
+        const newOrder: Order = {
+          id: newOrderId,
+          tableId: table.id,
+          items: [],
+          status: 'active',
+          startTime: new Date().toISOString(),
+          totalAmount: 0
+        };
+        setOrders(prev => [...prev, newOrder]);
+      }
       
-      const newTableObj = updatedTables.find(t => t.id === table.id)!;
+      const newTableObj = table.id === 'retail' ? table : tables.find(t => t.id === table.id)!;
       setActiveTableForPOS(newTableObj);
-      showToast(`Đã mở ${table.name} đón khách!`);
+      if (table.id !== 'retail') {
+        showToast(`Đã mở ${table.name} đón khách!`);
+      }
     } else {
       // Direct POS opening
       setActiveTableForPOS(table);
@@ -901,6 +933,40 @@ export default function App() {
 
       {/* Primary Layout Router */}
       <div className="flex-1 flex flex-col overflow-hidden h-full">
+        {/* Custom Scrolling Announcement Banner */}
+        {storeInfo?.announcement && (
+          <div className="bg-orange-500/10 border-b border-orange-500/20 py-2 px-4 overflow-hidden whitespace-nowrap select-none shrink-0 flex items-center gap-3">
+            <span className="text-[9px] font-black tracking-wider uppercase bg-orange-500 text-slate-950 px-2 py-0.5 rounded-md shrink-0 shadow-xs shadow-orange-500/10">
+              Thông báo
+            </span>
+            <div className="relative flex-1 overflow-hidden flex items-center h-4">
+              <style>{`
+                @keyframes marqueeGlobal {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-50%); }
+                }
+                .marquee-global-container {
+                  display: flex;
+                  flex-direction: row;
+                  width: max-content;
+                  animation: marqueeGlobal ${storeInfo.announcementSpeed || 20}s linear infinite;
+                }
+                .marquee-global-container:hover {
+                  animation-play-state: paused;
+                }
+                .marquee-global-text {
+                  padding-right: 4rem;
+                  white-space: nowrap;
+                }
+              `}</style>
+              <div className="marquee-global-container font-bold text-[10.5px] text-orange-400 tracking-wide">
+                <span className="marquee-global-text">{storeInfo.announcement}</span>
+                <span className="marquee-global-text">{storeInfo.announcement}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTableForPOS ? (
           /* MÀN HÌNH 2: BÁN HÀNG NHANH (POS) GẮN LIỀN VỚI BÀN */
           <MobilePOSScreen
@@ -1041,27 +1107,29 @@ export default function App() {
                 </span>
               </button>
 
-              <button
-                onClick={() => {
-                  setActiveTableForPOS(null);
-                  setCurrentTab('tables');
-                }}
-                className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1.5 h-12 rounded-2xl transition-all duration-300 ${
-                  currentTab === 'tables' ? 'text-orange-400 font-extrabold' : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                {currentTab === 'tables' && (
-                  <motion.div
-                    layoutId="activeTabPill"
-                    className="absolute inset-0 bg-orange-500/10 rounded-xl"
-                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                  />
-                )}
-                <span className="relative z-10 flex flex-col items-center justify-center">
-                  <Grid3X3 size={18} className={currentTab === 'tables' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
-                  <span className="text-[9px] mt-1">Sơ đồ bàn</span>
-                </span>
-              </button>
+              {storeInfo.fbMode !== false && (
+                <button
+                  onClick={() => {
+                    setActiveTableForPOS(null);
+                    setCurrentTab('tables');
+                  }}
+                  className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1.5 h-12 rounded-2xl transition-all duration-300 ${
+                    currentTab === 'tables' ? 'text-orange-400 font-extrabold' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {currentTab === 'tables' && (
+                    <motion.div
+                      layoutId="activeTabPill"
+                      className="absolute inset-0 bg-orange-500/10 rounded-xl"
+                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex flex-col items-center justify-center">
+                    <Grid3X3 size={18} className={currentTab === 'tables' ? 'stroke-[2.5]' : 'stroke-[1.5]'} />
+                    <span className="text-[9px] mt-1">Sơ đồ bàn</span>
+                  </span>
+                </button>
+              )}
 
               <button
                 onClick={() => {

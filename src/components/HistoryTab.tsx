@@ -169,7 +169,7 @@ export default function HistoryTab({ invoices, onClearHistory, storeInfo }: Hist
                           {inv.tableName} <span className="text-[10px] text-slate-400 font-medium">({inv.zoneName})</span>
                         </h4>
                         <div className="flex items-center gap-2 text-[9px] text-slate-500 mt-0.5">
-                          <span>⏱️ {formattedTime}</span>
+                          <span>{formattedTime}</span>
                           <span>•</span>
                           <span className="font-mono">{inv.id}</span>
                         </div>
